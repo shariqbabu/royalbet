@@ -4,10 +4,12 @@ import { AppLoader } from './AppLoader';
 import { useAuth } from '../context/AuthContext';
 
 export const ProtectedRoute: React.FC = () => {
-  const { firebaseUser, loading } = useAuth();
+  const { firebaseUser, user, loading } = useAuth();
 
   if (loading) return <AppLoader />;
-  if (!firebaseUser) {
+  // firebaseUser resolve hone mein 1-3s lagta hai — tab tak cached user se kaam chalao.
+  // Logout pe cache clear hota hai, isliye cached user = valid session.
+  if (!firebaseUser && !user) {
     return <Navigate to="/login" replace />;
   }
   return <Outlet />;
@@ -24,10 +26,10 @@ export const AdminRoute: React.FC = () => {
 };
 
 export const PublicRoute: React.FC = () => {
-  const { firebaseUser, loading } = useAuth();
+  const { firebaseUser, user, loading } = useAuth();
 
   if (loading) return <AppLoader />; // null ki jagah loader — blank flash fix
-  if (firebaseUser) {
+  if (firebaseUser || user) {
     return <Navigate to="/dashboard" replace />;
   }
   return <Outlet />;

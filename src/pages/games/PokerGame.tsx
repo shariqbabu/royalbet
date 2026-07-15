@@ -850,7 +850,9 @@ const PokerGamePage: React.FC = () => {
   const pot      = table?.pot    || 0;
   const curBet   = table?.currentBet || 0;
   const callAmt  = myP ? Math.max(0, Math.min(curBet - myP.bet, myP.chips)) : 0;
-  const minRaise = Math.max(curBet + (table?.bigBlind || 20), (table?.bigBlind || 20) * 2);
+  // Server rule: min raise-to = currentBet + lastRaiseSize; koi bet na ho to bigBlind
+  const lastRaiseSize = (table as any)?.lastRaiseSize || table?.bigBlind || 20;
+  const minRaise = curBet > 0 ? curBet + lastRaiseSize : (table?.bigBlind || 20);
   const maxRaise = myP ? myP.chips + myP.bet : 0;
 
   const myRole = useMemo<'player' | 'spectator' | null>(() => {

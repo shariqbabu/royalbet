@@ -33,6 +33,7 @@ const gameItems = [
   { path: '/games/poker',      icon: Zap,     label: 'Poker',       glow: '168,85,247',  tag: 'HOT'  },
   { path: '/games/nine-card',  icon: Spade,    label: 'Nine Card',   glow: '96,165,250',  tag: 'LIVE'  },
   { path: '/games/joker-pair', icon: Club,    label: '3 Pair Card', glow: '251,146,60',  tag: 'PAIR' },
+  { path: '/games/tambola',    icon: Ticket,  label: 'Tambola',     glow: '52,211,153',  tag: 'NEW'  },
 ];
 
 const tagColors: Record<string, string> = {

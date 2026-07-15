@@ -23,6 +23,7 @@ function getUrl(url: string) {
      if (url.startsWith("/api/poker/"))      return `${CF_API}${url}`;
      if (url.startsWith("/api/realludo/"))   return `${CF_API}${url}`;
      if (url.startsWith("/api/tictactoe/"))  return `${CF_API}${url}`;
+     if (url.startsWith("/api/tambola/"))    return `${CF_API}${url}`;
   // if (url.startsWith("/api/nine-card/"))  return `${CF_API}${url}`;
   // if (url.startsWith("/api/joker-pair/")) return `${CF_API}${url}`;
 
@@ -260,4 +261,25 @@ export const ludoApi = {
 
   timeout: (tableId: string) =>
     apiCall('/api/realludo/action', { type: 'timeout', tableId }),
+};
+
+// ─── Tambola (Housie) ─────────────────────────────────────────────────────────
+export const tambolaApi = {
+  getTables: () =>
+    apiCall('/api/tambola/action', { type: 'getTables' }),
+
+  join: (tableId: string, name: string, avatar: string) =>
+    apiCall('/api/tambola/action', { type: 'join', tableId, name, avatar }),
+
+  start: (tableId: string) =>
+    apiCall('/api/tambola/action', { type: 'start', tableId }),
+
+  call: (tableId: string) =>
+    apiCall('/api/tambola/action', { type: 'call', tableId }),
+
+  claim: (tableId: string, claimType: string) =>
+    apiCall('/api/tambola/action', { type: 'claim', tableId, claimType }),
+
+  leave: (tableId: string) =>
+    apiCall('/api/tambola/action', { type: 'leave', tableId }),
 };

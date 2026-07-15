@@ -18,6 +18,8 @@ const NineCardLobby = lazy(() => lazyRetry(() => import('./pages/games/NineCardL
 const TicTacToe = lazy(() => lazyRetry(() => import('./pages/games/TicTacToe')));
 const RealLudoGame = lazy(() => lazyRetry(() => import('./pages/games/RealLudo')));
 const RealLudoLobby = lazy(() => lazyRetry(() => import('./pages/games/RealLudoLobby')));
+const TambolaLobby = lazy(() => lazyRetry(() => import('./pages/games/TambolaLobby')));
+const TambolaGame = lazy(() => lazyRetry(() => import('./pages/games/TambolaGame')));
 
 const Login = lazy(() => lazyRetry(() => import('./pages/Login').then(m => ({ default: m.Login }))));
 const Signup = lazy(() => lazyRetry(() => import('./pages/Signup').then(m => ({ default: m.Signup }))));
@@ -81,6 +83,7 @@ function AppContent({ splashDone, setSplashDone }: { splashDone: boolean; setSpl
               <Route path="/games/joker-pair" element={<JokerPairLobby />} />
               <Route path="/games/tictactoe" element={<TicTacToe />} />
               <Route path="/games/realludolobby" element={<RealLudoLobby />} />
+              <Route path="/games/tambola" element={<TambolaLobby />} />
               <Route path="/redeem-code" element={<RedeemCode />} />
             </Route>
 
@@ -90,6 +93,7 @@ function AppContent({ splashDone, setSplashDone }: { splashDone: boolean; setSpl
             <Route path="/games/joker-pair/:tableId" element={<JokerPairGame />} />
             <Route path="/games/nine-card/:tableId" element={<NineCardGame />} />
             <Route path="/games/realludogame/:tableId" element={<RealLudoGame />} />
+            <Route path="/games/tambola/:tableId" element={<TambolaGame />} />
           </Route>
 
           <Route path="/" element={<Navigate to="/dashboard" replace />} />

@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/joker-pair/:action",
+      "destination": "/api/joker-pair/[action]"
+    },
+    {
+      "source": "/((?!api|assets).*)",
+      "destination": "/index.html"
+    }
+  ]
+}

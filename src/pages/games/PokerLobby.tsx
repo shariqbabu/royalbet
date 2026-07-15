@@ -1,0 +1,422 @@
+// src/pages/games/PokerLobby.tsx
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Users, ChevronRight, Loader2, X, Lock, Clock,
+  Shield, AlertCircle, Eye, Wallet, Table2, Coins,
+} from 'lucide-react';
+import { motion } from 'framer-motion';
+import { useAuth } from '../../context/AuthContext';
+import { pokerApi } from '../../utils/pokerApi';
+import type { PokerTable, SpectatorEntry } from '../../utils/pokerApi';
+import { subscribePokerTables } from '../../firebase/poker-subscription';
+import { formatCurrency, calculateUsableBalance } from '../../utils/helpers';
+import {
+  ActionButton, EmptyLobby, InfoChip, LobbyCard,
+  LobbyHero, LobbyStats, LoadingScreen, PremiumLobbyPage, lobbyAnim,
+} from '../../components/lobby/LobbyTheme';
+
+// ── Spade icon (lucide helper) ──────────────────
+const SpadeIcon = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" style={{ width: 20, height: 20 }}>
+    <path d="M12 2C12 2 3 8.5 3 14a5 5 0 0 0 7.5 4.33V20H9v2h6v-2h-1.5v-1.67A5 5 0 0 0 21 14C21 8.5 12 2 12 2z" />
+  </svg>
+);
+
+// ── Types & Status Helpers ──────────────────────────────────────────────────
+type JoinStatus = 'rejoin' | 'spectating' | 'watch' | 'join';
+
+const getJoinStatus = (table: PokerTable, uid?: string): JoinStatus => {
+  if (!uid) return 'join';
+  
+  // Find active players excluding those who left
+  const isSeatedActive = table.players.some(
+    (p) => p.uid === uid && p.seatStatus !== 'LEFT_SEAT'
+  );
+  if (isSeatedActive) return 'rejoin';
+
+  // Check if player is already waiting in spectator queue
+  const isSpectating = (table.spectatorQueue || []).some(
+    (s: SpectatorEntry) => s.uid === uid && !s.isSpectator
+  );
+  if (isSpectating) return 'spectating';
+
+  const activePlayersCount = table.players.filter((p) => p.seatStatus !== 'LEFT_SEAT').length;
+  if (activePlayersCount >= 6 || table.status === 'playing') return 'watch';
+
+  return 'join';
+};
+
+// ── Main Component ──────────────────────────────────────────────────────────
+const PokerLobbyPage: React.FC = () => {
+  const { user, wallet } = useAuth();
+  const navigate = useNavigate();
+
+  const [tables, setTables] = useState<PokerTable[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showJoin, setShowJoin] = useState(false);
+  const [selectedTable, setSelectedTable] = useState<PokerTable | null>(null);
+  const [joining, setJoining] = useState(false);
+  const [buyIn, setBuyIn] = useState(0);
+  const [error, setError] = useState('');
+
+  const usable = wallet ? calculateUsableBalance(wallet) : 0;
+
+  // ── Real-time subscription ────────────────────────────────────────────────
+  useEffect(() => {
+    return subscribePokerTables((data) => {
+      setTables(data);
+      setLoading(false);
+    });
+  }, []);
+
+  // ── Handlers ──────────────────────────────────────────────────────────────
+  const handleOpenJoin = (table: PokerTable) => {
+    const status = getJoinStatus(table, user?.uid);
+    if (status === 'rejoin' || status === 'spectating') {
+      navigate(`/games/poker/${table.id}`);
+      return;
+    }
+    setSelectedTable(table);
+    setBuyIn(table.minBuyIn);
+    setError('');
+    setShowJoin(true);
+  };
+
+  const handleWatch = async (table: PokerTable) => {
+    if (!user) return;
+    setJoining(true);
+    try {
+      await pokerApi.join(
+        table.id,
+        user.name || 'Player',
+        (user as any).photoURL || (user as any).avatar || '',
+        0
+      );
+    } catch (e) {
+      console.error('[WATCH ERROR]', e);
+    }
+    navigate(`/games/poker/${table.id}`);
+    setJoining(false);
+  };
+
+  const handleJoin = async () => {
+    if (!user || !selectedTable) return;
+    setError('');
+
+    if (buyIn < selectedTable.minBuyIn) {
+      setError(`Minimum buy-in is ${formatCurrency(selectedTable.minBuyIn)}`);
+      return;
+    }
+    if (buyIn > selectedTable.maxBuyIn) {
+      setError(`Maximum buy-in is ${formatCurrency(selectedTable.maxBuyIn)}`);
+      return;
+    }
+    if (usable < buyIn) {
+      setError('Insufficient balance');
+      return;
+    }
+
+    setJoining(true);
+    try {
+      await pokerApi.join(
+        selectedTable.id,
+        user.name || 'Player',
+        (user as any).photoURL || (user as any).avatar || '',
+        buyIn
+      );
+      setShowJoin(false);
+      navigate(`/games/poker/${selectedTable.id}`);
+    } catch (e: any) {
+      setError(e.message || 'Failed to join table');
+    } finally {
+      setJoining(false);
+    }
+  };
+
+  const getStakeLabel = (table: PokerTable) => {
+    const bb = table.bigBlind;
+    if (bb <= 10) return { label: 'Micro', accent: 'blue' as const };
+    if (bb <= 20) return { label: 'Low', accent: 'emerald' as const };
+    if (bb <= 50) return { label: 'Medium', accent: 'purple' as const };
+    if (bb <= 100) return { label: 'High', accent: 'violet' as const };
+    return { label: 'VIP', accent: 'yellow' as const };
+  };
+
+  if (loading) {
+    return <LoadingScreen accent="purple" label="Loading Poker tables..." />;
+  }
+
+  const totalPlayers = tables.reduce(
+    (s, t) => s + t.players.filter((p) => p.seatStatus !== 'LEFT_SEAT').length,
+    0
+  );
+
+  return (
+    <PremiumLobbyPage className="pb-6">
+      <motion.div variants={lobbyAnim.container} initial="hidden" animate="show">
+
+        <LobbyHero
+          title="Texas Hold'em Poker"
+          icon={SpadeIcon}
+          accent="purple"
+          subtitle={
+            <>
+              Join a premium poker table · Balance:{' '}
+              <span className="font-bold text-yellow-400">
+                {formatCurrency(usable)}
+              </span>
+            </>
+          }
+        />
+
+        <LobbyStats
+          stats={[
+            { label: 'Tables', value: tables.length, icon: Table2, accent: 'purple' },
+            { label: 'Players', value: totalPlayers, icon: Users, accent: 'blue' },
+            { label: 'Balance', value: formatCurrency(usable), icon: Wallet, accent: 'yellow' },
+          ]}
+        />
+
+        {tables.length === 0 ? (
+          <EmptyLobby
+            title="No Tables Available"
+            subtitle="Admin will add poker tables soon."
+            icon={SpadeIcon}
+          />
+        ) : (
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            {tables.map((table) => {
+              const stakeInfo = getStakeLabel(table);
+              const joinStatus = getJoinStatus(table, user?.uid);
+              const spectators = (table.spectatorQueue || []).length;
+              
+              const activePlayers = table.players.filter((p) => p.seatStatus !== 'LEFT_SEAT');
+              const isFull = activePlayers.length >= 6;
+              const isPlaying = table.status === 'playing';
+
+              return (
+                <LobbyCard key={table.id} accent="purple">
+                  {/* Header */}
+                  <div className="mb-3 flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="truncate text-base font-black text-white">
+                        {table.name}
+                      </h3>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <InfoChip accent={stakeInfo.accent}>{stakeInfo.label}</InfoChip>
+                        <InfoChip accent={isPlaying ? 'orange' : activePlayers.length >= 2 ? 'emerald' : 'blue'}>
+                          {isPlaying ? 'Active' : activePlayers.length >= 2 ? 'Ready' : 'Waiting'}
+                        </InfoChip>
+                        {spectators > 0 && (
+                          <InfoChip icon={Eye} accent="blue">{spectators} watching</InfoChip>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Seat Dots representation */}
+                    <div className="flex flex-shrink-0 gap-1">
+                      {[...Array(6)].map((_, i) => {
+                        const player = table.players.find((p) => p.seatIndex === i && p.seatStatus !== 'LEFT_SEAT');
+                        const isMe = player?.uid === user?.uid;
+                        return (
+                          <div key={i} className={`flex h-7 w-7 items-center justify-center rounded-full border text-xs font-bold ${
+                            player
+                              ? isMe
+                                ? 'border-purple-400 bg-purple-600 text-white'
+                                : 'border-white/10 bg-white/10 text-white'
+                              : 'border-white/10 bg-black/30 text-gray-600'
+                          }`}>
+                            {player ? player.name.charAt(0).toUpperCase() : '·'}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Stats Grid */}
+                  <div className="mb-3 grid grid-cols-2 gap-2">
+                    {([
+                      ['Blinds', `${formatCurrency(table.smallBlind)}/${formatCurrency(table.bigBlind)}`],
+                      ['Players', `${activePlayers.length}/6`],
+                      ['Min Buy-in', formatCurrency(table.minBuyIn)],
+                      ['Max Buy-in', formatCurrency(table.maxBuyIn)],
+                    ] as [string, string][]).map(([label, value]) => (
+                      <div key={label} className="rounded-2xl border border-white/10 bg-black/20 p-3">
+                        <p className="mb-1 text-[11px] text-gray-500">{label}</p>
+                        <p className="text-xs font-bold text-white">{value}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Active Player tags */}
+                  {activePlayers.length > 0 && (
+                    <div className="mb-3 flex flex-wrap gap-1.5">
+                      {activePlayers.map((p) => (
+                        <span key={p.uid} className={`rounded-full border px-2 py-1 text-[11px] ${
+                          p.uid === user?.uid
+                            ? 'border-purple-500/30 bg-purple-500/10 text-purple-400'
+                            : 'border-white/10 bg-white/[0.03] text-gray-400'
+                        }`}>
+                          {p.uid === user?.uid ? 'You' : p.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Dynamic action buttons based on real status */}
+                  {joinStatus === 'rejoin' && (
+                    <ActionButton variant="purple" onClick={() => navigate(`/games/poker/${table.id}`)}>
+                      Return to Table <ChevronRight className="h-4 w-4" />
+                    </ActionButton>
+                  )}
+                  {joinStatus === 'spectating' && (
+                    <ActionButton variant="watch" onClick={() => navigate(`/games/poker/${table.id}`)}>
+                      <Eye className="h-4 w-4" /> Back to Watching
+                    </ActionButton>
+                  )}
+                  {joinStatus === 'watch' && (
+                    <div className="flex gap-2">
+                      <ActionButton variant="watch" onClick={() => handleWatch(table)} disabled={joining}>
+                        {joining
+                          ? <Loader2 className="h-4 w-4 animate-spin" />
+                          : <><Eye className="h-4 w-4" /> Watch</>}
+                      </ActionButton>
+                      <div className="flex items-center gap-1 rounded-2xl border border-white/10 bg-black/30 px-3 text-xs text-gray-500">
+                        {isFull
+                          ? <><Lock className="h-3.5 w-3.5" /> Full</>
+                          : <><Clock className="h-3.5 w-3.5 text-orange-400" /> Live</>}
+                      </div>
+                    </div>
+                  )}
+                  {joinStatus === 'join' && (
+                    <ActionButton variant="purple" onClick={() => handleOpenJoin(table)}>
+                      Join Table <ChevronRight className="h-4 w-4" />
+                    </ActionButton>
+                  )}
+                </LobbyCard>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Informative Security Footer */}
+        <motion.div variants={lobbyAnim.item} className="mt-5 rounded-3xl border border-white/10 bg-white/[0.04] p-4">
+          <div className="flex items-start gap-3">
+            <Shield className="mt-0.5 h-5 w-5 flex-shrink-0 text-purple-400" />
+            <div className="space-y-1 text-xs leading-relaxed text-gray-500">
+              <p><span className="font-medium text-gray-300">How to play:</span> Join admin-created table. 2+ active players are required to deal a hand.</p>
+              <p>Uses combined <span className="text-yellow-400">deposit</span> + <span className="text-emerald-400">winning balance</span> safely with transaction isolation.</p>
+              <p><span className="font-medium text-blue-400">Watch mode:</span> Full tables can be observed in real-time with automatic card masking.</p>
+            </div>
+          </div>
+        </motion.div>
+
+      </motion.div>
+
+      {/* JOIN MODAL */}
+      {showJoin && selectedTable && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 px-0 backdrop-blur-sm md:items-center md:px-4">
+          <motion.div
+            initial={{ y: 40, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="w-full rounded-t-3xl border border-white/10 bg-[#0b0716] p-5 shadow-2xl md:max-w-md md:rounded-3xl"
+          >
+            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-white/20 md:hidden" />
+
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-black text-white">Join Table</h3>
+                <p className="text-xs text-gray-500">{selectedTable.name}</p>
+              </div>
+              <button
+                onClick={() => setShowJoin(false)}
+                className="rounded-xl border border-white/10 bg-white/[0.04] p-2 text-gray-400 hover:text-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {error && (
+              <div className="mb-4 flex items-center gap-2 rounded-2xl border border-red-500/25 bg-red-500/10 p-3 text-sm text-red-400">
+                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                {error}
+              </div>
+            )}
+
+            {/* Table Details list */}
+            <div className="mb-4 space-y-2 rounded-2xl border border-white/10 bg-black/20 p-4">
+              {([
+                ['Blinds', `${formatCurrency(selectedTable.smallBlind)}/${formatCurrency(selectedTable.bigBlind)}`],
+                ['Players', `${selectedTable.players.filter(p => p.seatStatus !== 'LEFT_SEAT').length}/6`],
+                ['Min Buy-in', formatCurrency(selectedTable.minBuyIn)],
+                ['Max Buy-in', formatCurrency(selectedTable.maxBuyIn)],
+                ['Your Balance', formatCurrency(usable)],
+              ] as [string, string][]).map(([label, value]) => (
+                <div key={label} className="flex justify-between text-sm">
+                  <span className="text-gray-500">{label}</span>
+                  <span className={label === 'Your Balance' ? 'font-bold text-yellow-400' : 'font-medium text-white'}>
+                    {value}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Buy-In Selector slider limits */}
+            <div className="mb-4">
+              <label className="mb-2 block text-xs uppercase tracking-wider text-gray-400">
+                Buy-in Amount
+              </label>
+              <div className="mb-2 flex gap-2">
+                {[
+                  selectedTable.minBuyIn,
+                  Math.round((selectedTable.minBuyIn + selectedTable.maxBuyIn) / 2),
+                  selectedTable.maxBuyIn,
+                ].map((amount) => (
+                  <button
+                    key={amount}
+                    disabled={usable < amount}
+                    onClick={() => setBuyIn(Math.min(amount, usable))}
+                    className={`flex-1 rounded-xl border py-2 text-xs font-bold transition ${
+                      buyIn === Math.min(amount, usable)
+                        ? 'border-purple-500 bg-purple-600 text-white'
+                        : 'border-white/10 bg-white/[0.04] text-gray-400 hover:border-purple-500/40 disabled:opacity-30 disabled:hover:border-white/10'
+                    }`}
+                  >
+                    {formatCurrency(amount)}
+                  </button>
+                ))}
+              </div>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-500">₹</span>
+                <input
+                  type="number"
+                  value={buyIn}
+                  onChange={(e) => setBuyIn(Number(e.target.value))}
+                  min={selectedTable.minBuyIn}
+                  max={Math.min(selectedTable.maxBuyIn, usable)}
+                  className="w-full rounded-2xl border border-white/10 bg-black/30 py-3 pl-9 pr-4 text-sm font-bold text-white outline-none transition focus:border-purple-500"
+                />
+              </div>
+            </div>
+
+            <ActionButton
+              variant="purple"
+              onClick={handleJoin}
+              disabled={joining || buyIn < selectedTable.minBuyIn || buyIn > usable}
+              className="py-3.5"
+            >
+              {joining ? (
+                <><Loader2 className="h-4 w-4 animate-spin" /> Entering Table...</>
+              ) : (
+                <><Coins className="h-4 w-4" /> Join with {formatCurrency(buyIn)}</>
+              )}
+            </ActionButton>
+          </motion.div>
+        </div>
+      )}
+    </PremiumLobbyPage>
+  );
+};
+
+export default PokerLobbyPage;

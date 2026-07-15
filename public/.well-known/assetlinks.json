@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "io.qzz.betadda.twa",
+        "sha256_cert_fingerprints": ["80:CD:0C:64:A3:68:0C:DF:2B:4D:B1:8E:23:DB:9D:3E:A2:D3:3A:DA:14:3A:47:E0:E7:EB:3E:12:2E:7D:B0:5D"]
+      }
+    }]

@@ -87,12 +87,14 @@ const TimerBar = ({
   isMyTurn: boolean;
 }) => {
   const [pct, setPct] = useState(100);
+  const [secs, setSecs] = useState(duration);
 
   useEffect(() => {
     const tick = () => {
       const elapsed = (Date.now() - turnStartedAt) / 1000;
       const remaining = Math.max(0, duration - elapsed);
       setPct((remaining / duration) * 100);
+      setSecs(Math.ceil(remaining));
     };
     tick();
     const id = setInterval(tick, 200);
@@ -106,20 +108,29 @@ const TimerBar = ({
       ? 'from-amber-400 to-yellow-500'
       : 'from-red-400 to-rose-500';
 
+  const secsColor = pct > 50 ? 'text-emerald-400' : pct > 25 ? 'text-amber-400' : 'text-red-400';
+
   return (
-    <div className="relative h-2 w-full bg-white/5 rounded-full overflow-hidden backdrop-blur-sm">
-      <motion.div
-        className={`h-full rounded-full bg-gradient-to-r ${color}`}
-        animate={{ width: `${pct}%` }}
-        transition={{ duration: 0.3, ease: 'linear' }}
-      />
-      {pct < 25 && isMyTurn && (
+    <div className="flex items-center gap-2">
+      <div className="relative h-2 flex-1 bg-white/5 rounded-full overflow-hidden backdrop-blur-sm">
         <motion.div
-          className="absolute inset-0 bg-red-500/20 rounded-full"
-          animate={{ opacity: [0, 0.5, 0] }}
-          transition={{ duration: 0.8, repeat: Infinity }}
+          className={`h-full rounded-full bg-gradient-to-r ${color}`}
+          animate={{ width: `${pct}%` }}
+          transition={{ duration: 0.3, ease: 'linear' }}
         />
-      )}
+        {pct < 25 && isMyTurn && (
+          <motion.div
+            className="absolute inset-0 bg-red-500/20 rounded-full"
+            animate={{ opacity: [0, 0.5, 0] }}
+            transition={{ duration: 0.8, repeat: Infinity }}
+          />
+        )}
+      </div>
+      <span className={`text-[11px] font-black tabular-nums w-8 text-right ${secsColor} ${
+        pct < 25 && isMyTurn ? 'animate-pulse' : ''
+      }`}>
+        {secs}s
+      </span>
     </div>
   );
 };
@@ -143,26 +154,27 @@ const DraggableCard = ({
   onSelect: () => void;
   onDragStart: (cardId: string) => void;
 }) => {
+  // Arrange karna (select/drag) hamesha allowed — sirf discard turn pe hota hai.
+  // Mobile pe drag nahi chalta, isliye tap-select → slot-tap primary flow hai.
+  const interactive = !isInGroup;
   return (
     <motion.div
       layout
-      draggable={isMyTurn && !isInGroup}
+      draggable={interactive}
       onDragStart={(e) => {
-        if (!isMyTurn || isInGroup) return;
+        if (!interactive) return;
         const ev = e as any;
         ev.dataTransfer?.setData?.('text/plain', cardId);
         onDragStart(cardId);
       }}
       onClick={onSelect}
-      whileHover={isMyTurn ? { y: -4, scale: 1.05 } : {}}
-      whileTap={isMyTurn ? { scale: 0.95 } : {}}
+      whileHover={interactive ? { y: -4, scale: 1.05 } : {}}
+      whileTap={interactive ? { scale: 0.95 } : {}}
       className={`relative cursor-pointer transition-all duration-200 select-none ${
         isSelected
           ? 'ring-2 ring-violet-400 ring-offset-2 ring-offset-[#080810] rounded-lg -translate-y-3 scale-105 z-10'
           : ''
-      } ${isInGroup ? 'opacity-30 pointer-events-none grayscale' : ''} ${
-        !isMyTurn ? 'cursor-default' : ''
-      }`}
+      } ${isInGroup ? 'opacity-30 pointer-events-none grayscale' : ''}`}
     >
       <CardDisplay card={cardToDisplayStr(cardId)} size="md" isJoker={isJoker} />
       {isJoker && (
@@ -193,6 +205,8 @@ const PairSlot = ({
   onDragEnter,
   onDragLeave,
   onDragDropHandler,
+  canTapPlace,
+  onTapPlace,
 }: {
   index: number;
   cards: string[];
@@ -206,13 +220,18 @@ const PairSlot = ({
   onDragEnter: () => void;
   onDragLeave: () => void;
   onDragDropHandler: (e: React.DragEvent) => void;
+  canTapPlace: boolean;
+  onTapPlace: () => void;
 }) => {
   const isComplete = cards.length === 2;
   const isValid =
     isComplete && isValidPair(cards[0], cards[1], jokerRank, allCards);
+  // Mobile flow: card select karke slot tap karo — drag optional hai
+  const tapReady = canTapPlace && !locked && cards.length < 2;
 
   return (
     <motion.div
+      onClick={() => { if (tapReady) onTapPlace(); }}
       onDragOver={(e) => {
         e.preventDefault();
         if (!locked && cards.length < 2) onDragEnter();
@@ -228,11 +247,13 @@ const PairSlot = ({
       }}
       layout
       className={`relative rounded-2xl border-2 transition-all duration-300 p-3 ${
+        tapReady ? 'cursor-pointer' : ''
+      } ${
         locked
           ? isValid
             ? 'border-emerald-500/60 bg-emerald-500/8 shadow-lg shadow-emerald-500/10'
             : 'border-red-500/40 bg-red-500/5'
-          : isDragOver
+          : isDragOver || tapReady
           ? 'border-violet-400/70 bg-violet-500/15 scale-[1.02] shadow-lg shadow-violet-500/20'
           : isComplete
           ? isValid
@@ -290,14 +311,12 @@ const PairSlot = ({
           >
             <CardDisplay card={cardToDisplayStr(cid)} size="sm" />
             {!locked && (
-              <motion.button
-                initial={{ opacity: 0 }}
-                whileHover={{ opacity: 1 }}
-                onClick={() => onRemove(index, cid)}
-                className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-red-500/90 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg z-10"
+              <button
+                onClick={(e) => { e.stopPropagation(); onRemove(index, cid); }}
+                className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-red-500/90 text-white flex items-center justify-center shadow-lg z-10 active:scale-90 transition-transform"
               >
                 <X size={10} />
-              </motion.button>
+              </button>
             )}
           </motion.div>
         ))}
@@ -307,12 +326,12 @@ const PairSlot = ({
           <div
             key={`empty-${i}`}
             className={`w-10 h-14 rounded-xl border-2 border-dashed flex items-center justify-center transition-all ${
-              isDragOver
+              isDragOver || tapReady
                 ? 'border-violet-400/50 bg-violet-500/10'
                 : 'border-white/10 bg-white/[0.02]'
             }`}
           >
-            {isDragOver ? (
+            {isDragOver || tapReady ? (
               <motion.div
                 animate={{ y: [0, 3, 0] }}
                 transition={{ duration: 0.8, repeat: Infinity }}
@@ -950,17 +969,29 @@ const JokerPairGame: React.FC = () => {
         </motion.div>
         <p className="text-white/40 font-medium">Waiting for game to start…</p>
         <p className="text-white/20 text-xs">Players needed</p>
-        
-         {/* ✅ Leave & Refund Button */}
-                <motion.button
-                  onClick={() => setShowLeaveModal(true)}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.97 }}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-red-500/10 to-orange-500/10 border border-red-500/25 text-red-400 text-sm font-semibold hover:from-red-500/18 hover:to-orange-500/18 transition-all shadow-md shadow-red-500/5"
-                >
-                  <Wallet size={15} />
-                  Leave & Refund
-                </motion.button>
+
+        {/* Leave & Refund */}
+        <motion.button
+          onClick={() => setShowLeaveModal(true)}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.97 }}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-red-500/10 to-orange-500/10 border border-red-500/25 text-red-400 text-sm font-semibold hover:from-red-500/18 hover:to-orange-500/18 transition-all shadow-md shadow-red-500/5"
+        >
+          <Wallet size={15} />
+          Leave & Refund
+        </motion.button>
+
+        {/* Modal is branch mein bhi mount hona zaroori hai — pehle button
+            state set karta tha lekin modal render hi nahi hota tha */}
+        <AnimatePresence>
+          {showLeaveModal && (
+            <LeaveConfirmModal
+              onConfirm={handleLeave}
+              onCancel={() => setShowLeaveModal(false)}
+              busy={leaveBusy}
+            />
+          )}
+        </AnimatePresence>
       </div>
     );
   }
@@ -982,6 +1013,12 @@ const JokerPairGame: React.FC = () => {
 
   const canDeclare = isMyTurn && hasPicked && groupsAreValid;
   const opponents = game.players.filter((uid) => uid !== myUid);
+
+  const validPairCount = myGroups.filter(
+    (g) =>
+      g.cards.length === 2 &&
+      isValidPair(g.cards[0], g.cards[1], game.jokerRank, FULL_DECK)
+  ).length;
 
   const topCard =
     game.discardPile.length > 0
@@ -1192,8 +1229,8 @@ const JokerPairGame: React.FC = () => {
               </div>
             </div>
 
-            {/* ── Pair Arrangement (Drag & Drop) ────────────────────── */}
-            {hasPicked && isMyTurn && (
+            {/* ── Pair Arrangement — hamesha visible, arrange kabhi bhi ── */}
+            {myHand.length > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -1202,7 +1239,9 @@ const JokerPairGame: React.FC = () => {
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-[10px] text-white/25 uppercase tracking-wider font-bold flex items-center gap-1.5">
                     <GripVertical size={10} className="text-violet-400" />
-                    Drag cards to pair slots
+                    {selectedCard && !selectedCardInGroup
+                      ? 'Tap a slot to place card'
+                      : 'Make 3 pairs — tap card, then slot'}
                   </p>
                   <div className="flex items-center gap-1">
                     {lockedSlots.filter(Boolean).length > 0 && (
@@ -1237,6 +1276,10 @@ const JokerPairGame: React.FC = () => {
                         if (cardId) addCardToSlot(i, cardId);
                         setDragOverSlot(null);
                       }}
+                      canTapPlace={!!selectedCard && !selectedCardInGroup}
+                      onTapPlace={() => {
+                        if (selectedCard) addCardToSlot(i, selectedCard);
+                      }}
                     />
                   ))}
                 </div>
@@ -1249,15 +1292,34 @@ const JokerPairGame: React.FC = () => {
                 <p className="text-[10px] text-white/25 uppercase tracking-wider font-bold">
                   Your Hand · {myHand.length} cards
                 </p>
-                {hasPicked && isMyTurn && !selectedCard && (
-                  <motion.p
-                    className="text-[10px] text-violet-400/70"
-                    animate={{ opacity: [0.5, 1, 0.5] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                  >
-                    Select a card to discard or drag to pair
-                  </motion.p>
-                )}
+                <div className="flex items-center gap-2">
+                  {/* Pair progress */}
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    validPairCount === 3
+                      ? 'text-emerald-400 bg-emerald-500/15'
+                      : 'text-white/30 bg-white/[0.04]'
+                  }`}>
+                    {validPairCount}/3 pairs
+                  </span>
+                  {isMyTurn && !hasPicked && (
+                    <motion.span
+                      className="text-[10px] text-amber-400 font-bold"
+                      animate={{ opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                    >
+                      Pick a card first ↑
+                    </motion.span>
+                  )}
+                  {hasPicked && isMyTurn && !selectedCard && (
+                    <motion.p
+                      className="text-[10px] text-violet-400/70"
+                      animate={{ opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    >
+                      Tap a card to discard or pair
+                    </motion.p>
+                  )}
+                </div>
               </div>
 
               <div className="flex flex-wrap gap-2 justify-center">
@@ -1276,7 +1338,7 @@ const JokerPairGame: React.FC = () => {
                       isJoker={isJokerCard}
                       isMyTurn={isMyTurn}
                       onSelect={() => {
-                        if (!isMyTurn || isInGroup) return;
+                        if (isInGroup) return;
                         setSelectedCard(isSelected ? null : cid);
                       }}
                       onDragStart={(id) => setDraggingCard(id)}

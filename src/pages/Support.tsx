@@ -159,7 +159,7 @@ export const Support: React.FC = () => {
   };
 
   return (
-    <div className="relative mx-auto flex h-[calc(100dvh-64px-2rem)] max-w-3xl flex-col overflow-hidden rounded-3xl border border-white/10 bg-[#0b0715]/80 shadow-2xl lg:h-[calc(100dvh-68px-3rem)]">
+    <div className="relative mx-auto flex h-[calc(100dvh-64px-4rem)] min-h-[420px] max-w-3xl flex-col overflow-hidden rounded-3xl border border-white/10 bg-[#0b0715]/80 shadow-2xl lg:h-[calc(100dvh-68px-5rem)]">
       {/* Ambient glows */}
       <div className="pointer-events-none absolute -top-20 left-1/2 h-56 w-56 -translate-x-1/2 rounded-full bg-yellow-500/10 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-24 -right-16 h-56 w-56 rounded-full bg-purple-500/10 blur-3xl" />
@@ -199,10 +199,10 @@ export const Support: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex h-full flex-col items-center justify-center gap-5 text-center"
+            className="flex min-h-full flex-col items-center justify-center gap-4 py-2 text-center"
           >
-            <div className="flex h-16 w-16 items-center justify-center rounded-3xl border border-yellow-500/25 bg-yellow-500/10">
-              <MessageCircleQuestion className="h-8 w-8 text-yellow-400" />
+            <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-3xl border border-yellow-500/25 bg-yellow-500/10">
+              <MessageCircleQuestion className="h-7 w-7 text-yellow-400" />
             </div>
             <div>
               <h3 className="text-base font-black text-white">

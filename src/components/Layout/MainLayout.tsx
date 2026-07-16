@@ -52,7 +52,7 @@ export const MainLayout: React.FC = () => {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10, scale: 0.99 }}
               transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-              className="p-4 lg:p-6"
+              className="min-h-full"
             >
               {/* Suspense yahan andar hai — lazy chunk load hote waqt layout
                   apni jagah rehta hai, sirf content area mein loader aata hai */}

@@ -54,7 +54,7 @@ const quickActions = [
   };
 
   return ( // ✅ return add kiya
-    <motion.div>
+    <motion.div className="min-h-full bg-[#080512] p-4 lg:p-6">
 
       {/* ─── Banner Slider ─── */}
       <BannerSlider banners={BANNERS} /> {/* ✅ Actually use kiya */}

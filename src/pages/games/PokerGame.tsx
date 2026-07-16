@@ -70,6 +70,25 @@ const injectStyles = () => {
     }
     .svg-btn3d:active:not(:disabled) .btn-label { transform: translateY(4px); }
 
+    /* Premium shine sweep across top face */
+    .svg-btn3d .btn-sheenwrap {
+      position: absolute; left: 4px; right: 4px; top: 2px; height: 42px;
+      border-radius: 12px; overflow: hidden; pointer-events: none;
+      transition: transform .12s cubic-bezier(.4,0,.2,1);
+    }
+    .svg-btn3d:active:not(:disabled) .btn-sheenwrap { transform: translateY(4px); }
+    .svg-btn3d .btn-sheen {
+      position: absolute; top: 0; bottom: 0; width: 34%;
+      background: linear-gradient(105deg, transparent 0%, rgba(255,255,255,.35) 50%, transparent 100%);
+      transform: translateX(-180%) skewX(-18deg);
+      animation: btnSheen 3.4s ease-in-out infinite;
+    }
+    .svg-btn3d:disabled .btn-sheen { animation: none; opacity: 0; }
+    @keyframes btnSheen {
+      0%       { transform: translateX(-180%) skewX(-18deg); }
+      55%,100% { transform: translateX(460%)  skewX(-18deg); }
+    }
+
     .shimmer-text {
       background:linear-gradient(90deg,#eab308 0%,#fef08a 30%,#eab308 60%,#a16207 100%);
       background-size:200% auto;
@@ -602,6 +621,7 @@ const ActionBtn: React.FC<{
   const gradTop  = `gradTop-${uid}`;
   const gradSide = `gradSide-${uid}`;
   const gradGloss= `gradGloss-${uid}`;
+  const gradRim  = `gradRim-${uid}`;
   const filterId = `blur-${uid}`;
 
   return (
@@ -630,6 +650,12 @@ const ActionBtn: React.FC<{
             <stop offset="60%"  stopColor="#ffffff" stopOpacity="0.05" />
             <stop offset="100%" stopColor="#ffffff" stopOpacity="0"    />
           </linearGradient>
+          {/* Metallic rim light — top edge bright, bottom edge dark */}
+          <linearGradient id={gradRim} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stopColor="#ffffff" stopOpacity="0.65" />
+            <stop offset="35%"  stopColor="#ffffff" stopOpacity="0.10" />
+            <stop offset="100%" stopColor="#000000" stopOpacity="0.35" />
+          </linearGradient>
           <filter id={filterId}>
             <feGaussianBlur stdDeviation="0.6" />
           </filter>
@@ -656,6 +682,12 @@ const ActionBtn: React.FC<{
             fill={`url(#${gradTop})`}
             stroke="rgba(0,0,0,0.35)" strokeWidth="1"
           />
+          {/* Metallic rim light stroke */}
+          <rect
+            x="3" y="1" width="114" height="46" rx="13"
+            fill="none"
+            stroke={`url(#${gradRim})`} strokeWidth="1.2"
+          />
           {/* Glossy top-half highlight */}
           <rect
             x="6" y="3" width="108" height="22" rx="10"
@@ -669,16 +701,23 @@ const ActionBtn: React.FC<{
         </g>
       </svg>
 
+      {/* Animated shine sweep */}
+      <span className="btn-sheenwrap" aria-hidden>
+        <span className="btn-sheen" />
+      </span>
+
       {/* Label overlay (also translates with top face) */}
       <span className="btn-label" style={{ color: c.text }}>
         <span style={{
-          fontSize: sublabel ? 13 : 14, fontWeight: 900, letterSpacing: 0.4,
-          lineHeight: 1,
+          fontSize: sublabel ? 13 : 14.5, fontWeight: 900, letterSpacing: 1.1,
+          lineHeight: 1, textTransform: 'uppercase',
+          textShadow: '0 1px 2px rgba(0,0,0,0.55), 0 0 10px rgba(0,0,0,0.25)',
         }}>{label}</span>
         {sublabel && (
           <span style={{
-            fontSize: 9.5, fontWeight: 700, opacity: 0.9, marginTop: 2,
-            letterSpacing: 0.3,
+            fontSize: 9.5, fontWeight: 800, opacity: 0.95, marginTop: 2.5,
+            letterSpacing: 0.5,
+            textShadow: '0 1px 1.5px rgba(0,0,0,0.5)',
           }}>{sublabel}</span>
         )}
       </span>

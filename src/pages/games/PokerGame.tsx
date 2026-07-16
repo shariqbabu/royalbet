@@ -41,6 +41,12 @@ const injectStyles = () => {
     @keyframes allInFlare  { 0%,100%{text-shadow:0 0 4px #eab308} 50%{text-shadow:0 0 12px #fef08a,0 0 24px #eab308} }
     @keyframes afkPulse    { 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.7)} 50%{box-shadow:0 0 0 6px rgba(239,68,68,0)} }
     @keyframes afkWarning  { 0%,100%{background:rgba(127,29,29,.95)} 50%{background:rgba(185,28,28,.95)} }
+    @keyframes refundFloat {
+      0%   { opacity:0; transform:translate(-50%,8px) scale(.8); }
+      15%  { opacity:1; transform:translate(-50%,0)   scale(1); }
+      75%  { opacity:1; transform:translate(-50%,-2px) scale(1); }
+      100% { opacity:0; transform:translate(-50%,-14px) scale(.9); }
+    }
 
     /* 3D SVG Action Button */
     .svg-btn3d {
@@ -160,6 +166,7 @@ interface PlayerAvatarProps {
   isActive?:          boolean;
   isWinner?:          boolean;
   isSplitWinner?:     boolean;
+  refundAmount?:      number;
   phase:              string;
   seatIndex:          number;
   turnSecondsLeft?:   number;
@@ -172,7 +179,7 @@ interface PlayerAvatarProps {
 }
 
 const PlayerAvatar: React.FC<PlayerAvatarProps> = memo(({
-  player, isMe, isActive, isWinner, isSplitWinner, phase,
+  player, isMe, isActive, isWinner, isSplitWinner, refundAmount = 0, phase,
   seatIndex, turnSecondsLeft, turnTotal = TURN_SECS_CLIENT,
   isAfkWarning = false,
   cardPos = 'bottom',
@@ -296,7 +303,7 @@ const PlayerAvatar: React.FC<PlayerAvatarProps> = memo(({
       transition: 'opacity 0.4s ease',
       position: 'relative',
     }}>
-      {/* Win banner */}
+      {/* Win banner — real winner ko WINNER, genuine split pe hi SPLIT */}
       {isWin && (
         <div style={{
           position: 'absolute', top: -24, left: '50%', transform: 'translateX(-50%)',
@@ -313,7 +320,26 @@ const PlayerAvatar: React.FC<PlayerAvatarProps> = memo(({
               : `0 2px 12px ${G.glow}`,
             display: 'flex', alignItems: 'center', gap: 3,
           }}>
-            {isSplitWinner ? '🤝 SPLIT' : '🏆 WIN'}
+            {isSplitWinner ? '🤝 SPLIT' : '🏆 WINNER'}
+          </span>
+        </div>
+      )}
+
+      {/* Refund banner — uncalled all-in wapas mila, winner nahi */}
+      {!isWin && refundAmount > 0 && (
+        <div style={{
+          position: 'absolute', top: -24, left: '50%', transform: 'translateX(-50%)',
+          whiteSpace: 'nowrap', zIndex: 50, animation: 'refundFloat 1.8s ease-out forwards',
+        }}>
+          <span style={{
+            fontSize: 8, fontWeight: 900, padding: '3px 8px', borderRadius: 99,
+            background: 'rgba(15,23,42,0.95)',
+            color: '#94a3b8',
+            border: '1px solid rgba(148,163,184,0.35)',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.5)',
+            display: 'flex', alignItems: 'center', gap: 3,
+          }}>
+            ↩ {formatCurrency(refundAmount)} returned
           </span>
         </div>
       )}
@@ -593,6 +619,54 @@ const PotDisplay: React.FC<{ pot: number }> = memo(({ pot }) => (
   </div>
 ));
 PotDisplay.displayName = 'PotDisplay';
+
+// ─── Pot → Winner chip flight ─────────────────────────────────────────────────
+// Seat positions (% of table area) — renderSeat coords se match karte hain
+const SEAT_POS_PCT: Record<number, { left: number; top: number }> = {
+  0: { left: 50, top: 88 },
+  1: { left: 50, top: 12 },
+  4: { left: 18, top: 30 },
+  3: { left: 82, top: 30 },
+  5: { left: 18, top: 70 },
+  2: { left: 82, top: 70 },
+};
+
+const ChipsToWinner: React.FC<{ seats: number[] }> = memo(({ seats }) => {
+  // flown=false → chips pot pe; ek frame baad true → left/top transition
+  // se target seat tak smooth udte hain
+  const [flown, setFlown] = React.useState(false);
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setFlown(true));
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  if (!seats.length) return null;
+  return (
+    <div style={{ position: 'absolute', inset: 0, zIndex: 60, pointerEvents: 'none' }}>
+      {seats.map(seat => {
+        const target = SEAT_POS_PCT[seat] || SEAT_POS_PCT[0];
+        return Array.from({ length: 6 }, (_, i) => (
+          <span
+            key={`chip-${seat}-${i}`}
+            style={{
+              position: 'absolute',
+              width: 14, height: 14, borderRadius: '50%',
+              background: 'radial-gradient(circle at 35% 30%, #fef08a 0%, #eab308 45%, #a16207 100%)',
+              border: '1.5px dashed rgba(255,255,255,0.8)',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.6), 0 0 10px rgba(234,179,8,0.5)',
+              left: flown ? `${target.left}%` : `calc(50% + ${(i % 3 - 1) * 12}px)`,
+              top:  flown ? `${target.top}%`  : `calc(46% + ${(i % 2) * 10}px)`,
+              opacity: flown ? 0 : 1,
+              transform: flown ? 'scale(0.5)' : 'scale(1)',
+              transition: `left .85s cubic-bezier(.25,.8,.35,1) ${i * 80}ms, top .85s cubic-bezier(.25,.8,.35,1) ${i * 80}ms, opacity .3s ease ${550 + i * 80}ms, transform .85s ease ${i * 80}ms`,
+            }}
+          />
+        ));
+      })}
+    </div>
+  );
+});
+ChipsToWinner.displayName = 'ChipsToWinner';
 
 // ─── 3D SVG Action Button ─────────────────────────────────────────────────────
 type ActionVariant = 'fold' | 'check' | 'call' | 'raise' | 'allin';
@@ -1157,14 +1231,35 @@ const PokerGamePage: React.FC = () => {
     setAfkDismissed(false);
   }, [table?.activePlayerUid]);
 
-  const winnerUids = useMemo(() => {
-    if (phase !== 'showdown' || !table) return new Set<string>();
+  // ── Payout classification: real winners vs uncalled-bet refunds ─────────────
+  // P1 all-in ₹300 vs P2 all-in ₹150 → P1 ko ₹150 wapas milta hai (refund),
+  // woh winner NAHI hai. Real winner = jise apne totalBet se zyada (ya barabar,
+  // split case) mila. Refund = apne contribution se KAM wapas mila.
+  const { winnerUids, refundMap } = useMemo(() => {
+    const winners = new Set<string>();
+    const refunds = new Map<string, number>();
+    if (phase !== 'showdown' || !table) return { winnerUids: winners, refundMap: refunds };
     const wins = (table as any).lastHandWins as Record<string, number> | undefined;
-    if (wins && Object.keys(wins).length > 0)
-      return new Set(Object.keys(wins).filter(uid => (wins[uid] || 0) > 0));
-    const lw = (table as any).lastWinner as string | undefined;
-    if (lw) return new Set([lw]);
-    return new Set<string>();
+    const lw   = (table as any).lastWinner as string | undefined;
+    if (wins && Object.keys(wins).length > 0) {
+      const entries = Object.entries(wins).filter(([, amt]) => (amt || 0) > 0);
+      for (const [uid, amt] of entries) {
+        const p = table.players.find(pl => pl.uid === uid);
+        const contributed = p?.totalBet ?? 0;
+        // Declared winner hamesha winner; warna jo apne contribution se kam
+        // paaye woh sirf refund hai (uncalled bet wapas gaya)
+        if (uid === lw || amt >= contributed) winners.add(uid);
+        else refunds.set(uid, amt);
+      }
+      // Safety: sab refund classify ho gaye to declared winner ko winner banao
+      if (winners.size === 0) {
+        if (lw) winners.add(lw);
+        else entries.forEach(([uid]) => winners.add(uid));
+      }
+    } else if (lw) {
+      winners.add(lw);
+    }
+    return { winnerUids: winners, refundMap: refunds };
   }, [phase, table]);
 
   const isSplitPot = winnerUids.size > 1;
@@ -1174,6 +1269,10 @@ const PokerGamePage: React.FC = () => {
   useEffect(() => {
     if (phase === 'showdown' && winnerUids.has(user?.uid || '')) haptic('win');
   }, [phase, winnerUids, user?.uid]);
+  useEffect(() => {
+    // Refund mila (uncalled bet wapas) — halki si vibration, win wali nahi
+    if (phase === 'showdown' && refundMap.has(user?.uid || '')) haptic('light');
+  }, [phase, refundMap, user?.uid]);
 
   const activeSeatedCount = useMemo(() =>
     table?.players.filter((p: any) => p.seatStatus !== 'LEFT_SEAT').length ?? 0,
@@ -1256,12 +1355,19 @@ const PokerGamePage: React.FC = () => {
     [arranged]
   );
 
+  // Winner seat numbers — chip flight animation ke liye
+  const winnerSeats = useMemo(() => {
+    if (phase !== 'showdown' || winnerUids.size === 0) return [] as number[];
+    return arranged.filter(p => winnerUids.has(p.uid)).map(p => p.seat);
+  }, [phase, winnerUids, arranged]);
+
   const renderSeat = useCallback((seat: number, cardPos: 'top' | 'bottom') => {
     const p         = atSeat(seat);
     const isActive  = !!p && table?.activePlayerUid === p.uid;
     const isThisMe  = p?.uid === user?.uid;
     const isWin     = !!p && winnerUids.has(p.uid);
     const isAfkWarn = !!p && afkWarningPlayerUid === p.uid;
+    const refundAmt = p ? (refundMap.get(p.uid) || 0) : 0;
 
     const showHandRank =
       phase === 'showdown' &&
@@ -1275,6 +1381,7 @@ const PokerGamePage: React.FC = () => {
         isActive={isActive}
         isWinner={isWin && !isSplitPot}
         isSplitWinner={isWin && isSplitPot}
+        refundAmount={refundAmt}
         phase={phase}
         seatIndex={p?.seatIndex ?? seat}
         turnSecondsLeft={isActive && turnLeft !== null ? turnLeft : undefined}
@@ -1287,7 +1394,7 @@ const PokerGamePage: React.FC = () => {
       />
     );
   }, [
-    atSeat, table?.activePlayerUid, user?.uid, winnerUids,
+    atSeat, table?.activePlayerUid, user?.uid, winnerUids, refundMap,
     afkWarningPlayerUid, phase, allCommunityDealt, allInShowdown,
     isSplitPot, turnLeft,
   ]);
@@ -1473,6 +1580,11 @@ const PokerGamePage: React.FC = () => {
             <div style={{ position: 'absolute', top: '70%', left: '14%', transform: 'translate(0,-50%)',         zIndex: 30 }}>{renderSeat(5, 'top')}</div>
             <div style={{ position: 'absolute', top: '70%', left: '86%', transform: 'translate(-100%,-50%)',     zIndex: 30 }}>{renderSeat(2, 'top')}</div>
             <div style={{ position: 'absolute', bottom: '5%',left: '50%', transform: 'translate(-50%,0)',        zIndex: 31 }}>{renderSeat(0, 'top')}</div>
+
+            {/* Pot → winner chip flight */}
+            {winnerSeats.length > 0 && (
+              <ChipsToWinner key={`flight-${table?.handNumber}-${winnerSeats.join('-')}`} seats={winnerSeats} />
+            )}
 
             {arranged.map(p => {
               if ((p.bet || 0) <= 0) return null;

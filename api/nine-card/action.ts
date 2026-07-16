@@ -167,7 +167,7 @@ async function recordDrawSplit(
       uid,
       game:    'NineCard',
       amount:  net,
-      type:    'SPLIT_WIN',
+      type:    'SPLIT_POT',
       description: `Draw Split | Round#${round} | Table: "${tableName}" | Bet: ₹${totalBet} Got: ₹${share} Net: +₹${net}`,
       idempotencyKey: `9card_draw_win_${tableId}_${round}_${uid}`,
     }).catch(e => console.error('[9CARD DRAW WIN RECORD]', e));

@@ -268,7 +268,9 @@ const BetHistoryPage: React.FC = () => {
   /* ── Stats — driven by `type`, with `status === PENDING` carved out first ── */
   const pendingBets = bets.filter((b) => b.status?.toUpperCase() === 'PENDING');
   const wins = bets.filter(
-    (b) => b.status?.toUpperCase() !== 'PENDING' && b.type === 'BET_WIN'
+    (b) =>
+      b.status?.toUpperCase() !== 'PENDING' &&
+      (b.type === 'BET_WIN' || b.type === 'SPLIT_POT')
   );
   const losses = bets.filter(
     (b) => b.status?.toUpperCase() !== 'PENDING' && b.type === 'BET_LOSS'
@@ -284,6 +286,7 @@ const BetHistoryPage: React.FC = () => {
     { key: 'PENDING', label: 'Pending' },
     { key: 'BET_WIN', label: 'Won' },
     { key: 'BET_LOSS', label: 'Lost' },
+    { key: 'SPLIT_POT', label: 'Split' },
   ];
 
   const visible =

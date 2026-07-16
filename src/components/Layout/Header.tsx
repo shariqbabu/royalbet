@@ -17,6 +17,7 @@ const pageTitles: Record<string, string> = {
   '/referral': 'Referral',
   '/profile': 'Profile',
   '/notifications': 'Notifications',
+  '/support': 'AI Support',
 
   // Games
   '/games-list': 'All Games',

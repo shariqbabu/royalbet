@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Wallet, PlusCircle, ArrowUpCircle, Clock,
   History, Users, User, Bell, X, ChevronRight, Trophy, Ticket,
-  LogOut, Swords, Grid3x3, Zap, Dice5, Club, Spade,
+  LogOut, Swords, Grid3x3, Zap, Dice5, Club, Spade, Bot,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { logOut } from '../../firebase/auth';
@@ -24,6 +24,7 @@ const navItems = [
   { path: '/referral',           icon: Users,           label: 'Referral',           glow: '236,72,153'  },
   { path: '/profile',            icon: User,            label: 'Profile',            glow: '99,102,241'  },
   { path: '/notifications',      icon: Bell,            label: 'Notifications',      glow: '251,191,36'  },
+  { path: '/support',            icon: Bot,             label: 'AI Support',         glow: '52,211,153'  },
 ];
 
 const gameItems = [

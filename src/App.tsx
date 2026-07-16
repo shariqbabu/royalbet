@@ -36,6 +36,7 @@ const Notifications = lazy(() => lazyRetry(() => import('./pages/Notifications')
 const Matchmaking = lazy(() => lazyRetry(() => import('./pages/Matchmaking').then(m => ({ default: m.Matchmaking }))));
 const GameRoom = lazy(() => lazyRetry(() => import('./pages/GameRoom').then(m => ({ default: m.GameRoom }))));
 const RedeemCode = lazy(() => lazyRetry(() => import('./pages/redeemCode')));
+const Support = lazy(() => lazyRetry(() => import('./pages/Support')));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -85,6 +86,7 @@ function AppContent({ splashDone, setSplashDone }: { splashDone: boolean; setSpl
               <Route path="/games/realludolobby" element={<RealLudoLobby />} />
               <Route path="/games/tambola" element={<TambolaLobby />} />
               <Route path="/redeem-code" element={<RedeemCode />} />
+              <Route path="/support" element={<Support />} />
             </Route>
 
             {/* Without Header */}

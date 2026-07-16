@@ -10,6 +10,9 @@ import { useAuth } from '../context/AuthContext';
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const SUPPORT_API = 'https://betaddaadmin.vercel.app/api/chat';
+// Admin backend ke PUBLIC_API_KEY se match hona chahiye (agar wahan set hai).
+// betadda ke .env mein: VITE_SUPPORT_API_KEY=<same-value>
+const SUPPORT_API_KEY = import.meta.env.VITE_SUPPORT_API_KEY as string | undefined;
 
 const SYSTEM_PROMPT = `You are "Adda AI", the friendly support assistant for BetAdda Casino — a real-money gaming app with Poker, Nine Card (Teen Patti style), 3 Pair Card (Joker Pair), Tic Tac Toe, Ludo and Tambola.
 
@@ -123,7 +126,10 @@ export const Support: React.FC = () => {
       const history = messages.slice(-12).map(m => ({ role: m.role, content: m.content }));
       const res = await fetch(SUPPORT_API, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(SUPPORT_API_KEY ? { 'x-api-key': SUPPORT_API_KEY } : {}),
+        },
         body: JSON.stringify({
           message,
           system: SYSTEM_PROMPT + (user?.name ? `\nThe user's display name is "${user.name}".` : ''),

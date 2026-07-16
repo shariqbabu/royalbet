@@ -23,6 +23,7 @@ import {
   calculateTotalBalance,
   calculateUsableBalance,
 } from '../utils/helpers';
+import { AnimatedNumber } from '../components/ui/AnimatedNumber';
 
 // Animation variants
 const container = {
@@ -124,9 +125,10 @@ export const Wallet: React.FC = () => {
                   <p className="text-xs uppercase tracking-wide text-gray-500">
                     Total Balance
                   </p>
-                  <p className="text-3xl font-black text-white sm:text-4xl">
-                    {formatCurrency(totalBalance)}
-                  </p>
+                  <AnimatedNumber
+                    value={totalBalance}
+                    className="text-3xl font-black text-white sm:text-4xl"
+                  />
                 </div>
               </div>
 

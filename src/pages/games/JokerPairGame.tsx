@@ -6,6 +6,8 @@ import { db } from '../../firebase/config';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 import CardDisplay from '../../components/games/CardDisplay';
+import { WinCelebration } from '../../components/games/WinCelebration';
+import { haptic } from '../../utils/haptics';
 import {
   startGame,
   pickFromDrawPile,
@@ -800,6 +802,7 @@ const JokerPairGame: React.FC = () => {
       const pool = game.prizePool;
       const win = Math.floor(pool * 0.9);
       toast.success(`🏆 You won ₹${win}!`);
+      haptic('win');
     } else {
       toast.error('Match lost. Better luck next time!');
     }
@@ -1020,6 +1023,8 @@ const JokerPairGame: React.FC = () => {
   // ── Derived ──────────────────────────────────────────────────────────────
 
   const isMyTurn = game.currentTurnUid === myUid;
+  // Haptic on my turn
+  useEffect(() => { if (isMyTurn) haptic('medium'); }, [isMyTurn]);
   // Hand ab private subcollection se aata hai — main doc mein sirf counts
   const myHand = (myPriv?.hand || []).filter(
     (cid) => cid && cid.trim().length >= 2
@@ -1480,6 +1485,9 @@ const JokerPairGame: React.FC = () => {
           />
         )}
       </AnimatePresence>
+
+      {/* ── Confetti on win ─────────────────────────────────────── */}
+      <WinCelebration trigger={showResult && game.status === 'finished' && game.winnerId === myUid} />
 
       {/* ── Result ──────────────────────────────────────────────── */}
       <AnimatePresence>

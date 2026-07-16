@@ -390,16 +390,6 @@ export const Sidebar: React.FC = () => {
 
   return (
     <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400;500;600;700&display=swap');
-        .sidebar-nav-item:hover { background: rgba(255,255,255,0.05) !important; border-color: rgba(255,255,255,0.08) !important; }
-        .sidebar-nav-item:hover span { color: rgba(255,255,255,0.85) !important; }
-        .sidebar-scroll::-webkit-scrollbar { width: 3px; }
-        .sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
-        .sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
-        @keyframes balanceShine { 0%{background-position:-200% center} 100%{background-position:200% center} }
-        .games-toggle:hover { background: rgba(255,255,255,0.06) !important; }
-      `}</style>
 
       {/* Desktop sidebar */}
       <div className="hidden lg:flex w-64 h-screen sticky top-0 flex-shrink-0 flex-col">

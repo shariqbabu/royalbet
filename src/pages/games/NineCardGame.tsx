@@ -12,6 +12,9 @@ import { useAuth } from "../../context/AuthContext";
 import { nineCardApi, subscribeNineCardTable } from '../../firebase/nineCardApi';
 import type { NineCardTable, NineCardPlayer } from '../../firebase/nineCardApi';
 import { ArrowLeft, Eye, EyeOff, Coins } from 'lucide-react';
+import CardDisplay from '../../components/games/CardDisplay';
+import { WinCelebration } from '../../components/games/WinCelebration';
+import { haptic } from '../../utils/haptics';
 
 // Poker wali palette
 const G = { l: "#fef08a", m: "#eab308", d: "#a16207", glow: "rgba(234,179,8,0.5)" };
@@ -27,43 +30,12 @@ const SEAT_COORDS = [
   { left: 87, top: 48, cardDir: 'left' },  // Right
 ];
 
-// ── Suit symbol helper ────────────────────────────────────────
-const suitSymbol = (s: string) =>
-  s === 'S' ? '♠' : s === 'H' ? '♥' : s === 'D' ? '♦' : '♣';
-
-// ── Card — poker CardDisplay jaisa look ───────────────────────
-const CardMini = ({ id, isBack, big }: { id?: string; isBack?: boolean; big?: boolean }) => {
-  const w = big ? 34 : 28, h = big ? 48 : 40;
-  return (
-    <div style={{
-      width: w, height: h, borderRadius: 5,
-      background: isBack
-        ? "linear-gradient(135deg,#1e1040 0%,#312e81 50%,#1e1040 100%)"
-        : "linear-gradient(160deg,#ffffff 0%,#f1f5f9 100%)",
-      border: isBack ? "1px solid rgba(129,140,248,0.4)" : "1px solid #cbd5e1",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      fontSize: big ? 12 : 10, fontWeight: 900,
-      color: id && "HD".includes(id.slice(-1)) ? "#dc2626" : "#0f172a",
-      boxShadow: "0 4px 8px rgba(0,0,0,0.55)", flexShrink: 0,
-      position: 'relative', overflow: 'hidden',
-    }}>
-      {!isBack && id ? (
-        <div style={{ textAlign: "center", lineHeight: 1.05 }}>
-          <div>{id.slice(0, -1)}</div>
-          <div style={{ fontSize: big ? 11 : 9 }}>{suitSymbol(id.slice(-1))}</div>
-        </div>
-      ) : (
-        <>
-          <div style={{
-            position: 'absolute', inset: 3, borderRadius: 3,
-            border: '1px solid rgba(129,140,248,0.25)',
-          }} />
-          <span style={{ color: 'rgba(165,180,252,0.5)', fontSize: big ? 14 : 12 }}>♠</span>
-        </>
-      )}
-    </div>
-  );
-};
+// ── CardMini — CardDisplay wrapper (brand card-back + consistent look) ───────────
+// Custom inline card (indigo gradient) hata ke shared CardDisplay use karta hai.
+// Future CardDisplay updates automatically yahan bhi reflect honge.
+const CardMini = ({ id, isBack, big }: { id?: string; isBack?: boolean; big?: boolean }) => (
+  <CardDisplay card={id} faceDown={isBack} size={big ? 'sm' : 'xs'} />
+);
 
 // ── Timer ring (poker TimerRing jaisa) ────────────────────────
 const TimerRing = ({ seconds, size }: { seconds: number; size: number }) => {
@@ -106,6 +78,7 @@ export default function NineCardGame() {
   const [table, setTable] = useState<NineCardTable | null>(null);
   const [turnTime, setTurnTime] = useState(TURN_SECS);
   const [waitingCountdown, setWaitingCountdown] = useState<number | null>(null);
+  const [showAfkWarning, setShowAfkWarning] = useState(false);
 
   // Winner overlay state
   const [showResult, setShowResult] = useState(false);
@@ -118,6 +91,9 @@ export default function NineCardGame() {
   const autoStartFiredRef = useRef(false);
   const autoResetFiredRef = useRef(false);
   const prevStatusRef     = useRef<string | null>(null);
+
+  // ── Derived: is it my turn? (needed by AFK effect above table-null guard) ───
+  const isMyTurn = table?.currentTurn === myUid && table?.status === 'playing';
 
   // ── Subscribe to table ──────────────────────────────────────
   useEffect(() => {
@@ -144,6 +120,16 @@ export default function NineCardGame() {
       return () => clearInterval(interval);
     }
   }, [table?.currentTurn, table?.status, serverOffsetMs]);
+
+  // ── AFK Warning — last 5 seconds ─────────────────────────────────────────────
+  useEffect(() => {
+    if (isMyTurn && turnTime <= 5 && turnTime > 0) {
+      setShowAfkWarning(true);
+      haptic('urgent');
+    } else {
+      setShowAfkWarning(false);
+    }
+  }, [turnTime, isMyTurn]);
 
   // ── Waiting / Auto-Start Timer ──────────────────────────────
   useEffect(() => {
@@ -223,11 +209,18 @@ export default function NineCardGame() {
     return layout;
   }, [table, myUid]);
 
+  // ── Haptics — my turn + win ──────────────────────────────────────────────────
+  useEffect(() => { if (isMyTurn) haptic('medium'); }, [isMyTurn]);
+  useEffect(() => {
+    const isWinner = table?.status === 'finished' && table?.winnerId === myUid;
+    if (isWinner) haptic('win');
+  }, [table?.status, table?.winnerId, myUid]);
+
   if (!table) return null;
 
   const amount       = wallet?.totalBalance ?? 0;
   const myPlayer     = table.players[myUid];
-  const isMyTurn     = table.currentTurn === myUid && table.status === 'playing';
+  // isMyTurn already defined above (before null guard), reuse it
   const hasSeenCards = myPlayer?.seenCards ?? false;
   const turnName     = table.currentTurn && table.currentTurn !== myUid
     ? String(table.players[table.currentTurn]?.displayName || 'Player').replace(/\s.*/, '')
@@ -588,6 +581,24 @@ export default function NineCardGame() {
         ) : null}
       </div>
 
+      {/* ── AFK Warning overlay ── */}
+      {showAfkWarning && (
+        <div style={{
+          position: 'fixed', bottom: 90, left: '50%', transform: 'translateX(-50%)',
+          zIndex: 150, padding: '8px 18px', borderRadius: 14,
+          background: 'rgba(185,28,28,0.95)', border: '1px solid rgba(239,68,68,0.5)',
+          color: '#fca5a5', fontWeight: 800, fontSize: 12,
+          animation: 'afkPulse 1s ease-in-out infinite',
+          boxShadow: '0 4px 20px rgba(239,68,68,0.4)',
+          whiteSpace: 'nowrap',
+        }}>
+          ⚠ Act now! Auto-pack in {Math.ceil(turnTime)}s
+        </div>
+      )}
+
+      {/* ── Confetti on win ── */}
+      <WinCelebration trigger={showResult && !!(resultData && !resultData.isDraw)} />
+
       {/* ── Winner Result Overlay ── */}
       {showResult && resultData && (
         <div style={{
@@ -670,8 +681,12 @@ export default function NineCardGame() {
           to   { transform: rotate(360deg); }
         }
         @keyframes slideUp {
-          from { opacity: 0; transform: translateY(10px); }
+          from { opacity: 0; transform: tslateY(10px); }
           to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes afkPulse {
+          0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.7); }
+          50%     { box-shadow: 0 0 0 6px rgba(239,68,68,0); }
         }
       `}</style>
     </div>

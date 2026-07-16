@@ -9,6 +9,8 @@ import type { PokerTable, PokerPlayer } from '../../utils/pokerApi';
 import { subscribePokerTable }     from '../../firebase/poker-subscription';
 import CardDisplay                 from '../../components/games/CardDisplay';
 import { formatCurrency }          from '../../utils/helpers';
+import { WinCelebration }          from '../../components/games/WinCelebration';
+import { haptic }                  from '../../utils/haptics';
 import {
   Loader2, LogOut, Volume2, VolumeX, Zap, Trophy, Users, Eye,
 } from 'lucide-react';
@@ -1128,6 +1130,12 @@ const PokerGamePage: React.FC = () => {
 
   const isSplitPot = winnerUids.size > 1;
 
+  // ── Haptics ────────────────────────────────────────────────────────────────
+  useEffect(() => { if (isMyTurn) haptic('medium'); }, [isMyTurn]);
+  useEffect(() => {
+    if (phase === 'showdown' && winnerUids.has(user?.uid || '')) haptic('win');
+  }, [phase, winnerUids, user?.uid]);
+
   const activeSeatedCount = useMemo(() =>
     table?.players.filter((p: any) => p.seatStatus !== 'LEFT_SEAT').length ?? 0,
     [table?.players]
@@ -1270,6 +1278,9 @@ const PokerGamePage: React.FC = () => {
       display: 'flex', flexDirection: 'column',
       overflow: 'hidden', userSelect: 'none', position: 'relative',
     }}>
+
+      {/* Confetti on win */}
+      <WinCelebration trigger={phase === 'showdown' && winnerUids.has(user?.uid || '')} />
 
       {isMyAfkWarning && turnLeft !== null && (
         <AfkWarningOverlay

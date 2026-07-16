@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { useAppStore } from '../../store/useStore';
 import { formatCurrency, calculateTotalBalance } from '../../utils/helpers';
+import { AnimatedNumber } from '../ui/AnimatedNumber';
 
 const pageTitles: Record<string, string> = {
   '/dashboard': 'Dashboard',
@@ -116,9 +117,10 @@ export const Header: React.FC = () => {
                   <p className="text-[10px] font-medium uppercase tracking-wide text-gray-500">
                     Balance
                   </p>
-                  <span className="text-sm font-bold text-yellow-400">
-                    {formatCurrency(totalBalance)}
-                  </span>
+                  <AnimatedNumber
+                    value={totalBalance}
+                    className="text-sm font-bold text-yellow-400"
+                  />
                 </div>
               </motion.div>
             </Link>

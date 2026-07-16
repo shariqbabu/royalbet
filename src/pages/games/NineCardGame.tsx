@@ -11,9 +11,10 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { nineCardApi, subscribeNineCardTable } from '../../firebase/nineCardApi';
 import type { NineCardTable, NineCardPlayer } from '../../firebase/nineCardApi';
-import { ArrowLeft, Eye, EyeOff, Coins } from 'lucide-react';
+import { ArrowLeft, Coins } from 'lucide-react';
 import CardDisplay from '../../components/games/CardDisplay';
 import { WinCelebration } from '../../components/games/WinCelebration';
+import { ActionBtn3D } from '../../components/games/ActionBtn3D';
 import { haptic } from '../../utils/haptics';
 
 // Poker wali palette
@@ -514,61 +515,37 @@ export default function NineCardGame() {
         {isMyTurn ? (
           <div style={{ display: "flex", gap: 8, width: "100%", maxWidth: 460, margin: '0 auto' }}>
             {/* PACK */}
-            <button
+            <ActionBtn3D
+              label="Pack"
+              variant="fold"
               onClick={() => { nineCardApi.pack(tableId!).catch(() => {}); }}
-              style={{
-                flex: 1, height: 52, borderRadius: 14,
-                border: "1px solid rgba(239,68,68,0.35)",
-                background: "linear-gradient(180deg,rgba(239,68,68,0.22),rgba(239,68,68,0.1))",
-                color: "#f87171", fontWeight: 800, fontSize: 13, cursor: "pointer",
-              }}
-            >
-              PACK
-            </button>
+            />
 
             {/* SEE — only if not yet seen */}
             {!hasSeenCards && (
-              <button
+              <ActionBtn3D
+                label="See"
+                variant="see"
                 onClick={() => { nineCardApi.seeCards(tableId!).catch(() => {}); }}
-                style={{
-                  flex: 1, height: 52, borderRadius: 14,
-                  border: "1px solid rgba(59,130,246,0.35)",
-                  background: "linear-gradient(180deg,rgba(59,130,246,0.22),rgba(59,130,246,0.1))",
-                  color: "#60a5fa", fontWeight: 800, fontSize: 13, cursor: "pointer",
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-                }}
-              >
-                <EyeOff size={14} /> SEE
-              </button>
+              />
             )}
 
-            {/* CALL — primary */}
-            <button
+            {/* CALL — primary (double width) */}
+            <ActionBtn3D
+              label="Call"
+              sublabel={`₹${table.currentCallAmount}`}
+              variant="call"
+              grow={2}
               onClick={() => { nineCardApi.call(tableId!).catch(() => {}); }}
-              style={{
-                flex: 2, height: 52, borderRadius: 14, border: 0,
-                background: `linear-gradient(180deg,${E.m},#059669)`,
-                color: "#fff", fontWeight: 900, fontSize: 15, cursor: "pointer",
-                boxShadow: '0 4px 14px rgba(16,185,129,0.35)',
-              }}
-            >
-              CALL ₹{table.currentCallAmount}
-            </button>
+            />
 
             {/* SHOW — only after seen */}
             {hasSeenCards && (
-              <button
+              <ActionBtn3D
+                label="Show"
+                variant="show"
                 onClick={() => { nineCardApi.show(tableId!).catch(() => {}); }}
-                style={{
-                  flex: 1, height: 52, borderRadius: 14,
-                  border: `1px solid rgba(234,179,8,0.4)`,
-                  background: "linear-gradient(180deg,rgba(234,179,8,0.25),rgba(234,179,8,0.1))",
-                  color: G.l, fontWeight: 800, fontSize: 13, cursor: "pointer",
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-                }}
-              >
-                <Eye size={14} /> SHOW
-              </button>
+              />
             )}
           </div>
         ) : table.status === 'playing' && turnName ? (

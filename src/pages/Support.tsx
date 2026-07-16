@@ -159,8 +159,8 @@ export const Support: React.FC = () => {
   };
 
   return (
-    <div className="relative min-h-full bg-[#080512] p-0 sm:p-4 lg:p-6">
-      <div className="relative mx-auto flex h-[calc(100dvh-64px)] min-h-[420px] max-w-3xl flex-col overflow-hidden bg-[#0b0715]/80 shadow-2xl sm:h-[calc(100dvh-64px-2rem)] sm:rounded-3xl sm:border sm:border-white/10 lg:h-[calc(100dvh-68px-3rem)]">
+    <div className="relative flex min-h-full flex-1 flex-col bg-[#080512] p-0 sm:p-4 lg:p-6">
+      <div className="relative mx-auto flex min-h-[420px] w-full max-w-3xl flex-1 flex-col overflow-hidden bg-[#0b0715]/80 shadow-2xl sm:rounded-3xl sm:border sm:border-white/10">
       {/* Ambient glows */}
       <div className="pointer-events-none absolute -top-20 left-1/2 h-56 w-56 -translate-x-1/2 rounded-full bg-yellow-500/10 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-24 -right-16 h-56 w-56 rounded-full bg-purple-500/10 blur-3xl" />

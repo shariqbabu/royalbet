@@ -48,48 +48,41 @@ const injectStyles = () => {
       100% { opacity:0; transform:translate(-50%,-14px) scale(.9); }
     }
 
-    /* 3D SVG Action Button */
-    .svg-btn3d {
+    /* WinZO-style Action Button */
+    .wz-btn {
       position: relative;
       flex: 1;
-      height: 56px;
-      background: transparent;
+      min-height: 52px;
       border: none;
-      padding: 0;
+      border-radius: 14px;
+      padding: 8px 4px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       cursor: pointer;
       outline: none;
-      transition: transform .12s cubic-bezier(.4,0,.2,1), filter .12s ease;
+      overflow: hidden;
+      transition: transform .1s cubic-bezier(.4,0,.2,1), filter .1s ease,
+                  border-bottom-width .1s cubic-bezier(.4,0,.2,1), box-shadow .1s ease;
       -webkit-tap-highlight-color: transparent;
     }
-    .svg-btn3d svg { display: block; width: 100%; height: 100%; overflow: visible; }
-    .svg-btn3d .btn-top   { transition: transform .12s cubic-bezier(.4,0,.2,1); }
-    .svg-btn3d:hover:not(:disabled)          { filter: brightness(1.12); }
-    .svg-btn3d:active:not(:disabled) .btn-top{ transform: translateY(4px); }
-    .svg-btn3d:disabled { opacity:.4; cursor:not-allowed; filter: grayscale(.4); }
-    .svg-btn3d .btn-label {
-      position: absolute; inset: 0;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      pointer-events: none;
-      transition: transform .12s cubic-bezier(.4,0,.2,1);
-      text-shadow: 0 1px 0 rgba(0,0,0,.6), 0 0 6px rgba(0,0,0,.3);
+    .wz-btn:hover:not(:disabled)  { filter: brightness(1.08); }
+    .wz-btn:active:not(:disabled) {
+      transform: translateY(3px);
+      border-bottom-width: 1px !important;
     }
-    .svg-btn3d:active:not(:disabled) .btn-label { transform: translateY(4px); }
-
-    /* Premium shine sweep across top face */
-    .svg-btn3d .btn-sheenwrap {
-      position: absolute; left: 4px; right: 4px; top: 2px; height: 42px;
-      border-radius: 12px; overflow: hidden; pointer-events: none;
-      transition: transform .12s cubic-bezier(.4,0,.2,1);
-    }
-    .svg-btn3d:active:not(:disabled) .btn-sheenwrap { transform: translateY(4px); }
-    .svg-btn3d .btn-sheen {
-      position: absolute; top: 0; bottom: 0; width: 34%;
+    .wz-btn:disabled { opacity:.4; cursor:not-allowed; filter: grayscale(.5); }
+    /* Shine sweep */
+    .wz-btn::after {
+      content: '';
+      position: absolute; top: 0; bottom: 0; left: 0; width: 34%;
       background: linear-gradient(105deg, transparent 0%, rgba(255,255,255,.35) 50%, transparent 100%);
       transform: translateX(-180%) skewX(-18deg);
       animation: btnSheen 3.4s ease-in-out infinite;
+      pointer-events: none;
     }
-    .svg-btn3d:disabled .btn-sheen { animation: none; opacity: 0; }
+    .wz-btn:disabled::after { animation: none; opacity: 0; }
     @keyframes btnSheen {
       0%       { transform: translateX(-180%) skewX(-18deg); }
       55%,100% { transform: translateX(460%)  skewX(-18deg); }
@@ -668,19 +661,18 @@ const ChipsToWinner: React.FC<{ seats: number[] }> = memo(({ seats }) => {
 });
 ChipsToWinner.displayName = 'ChipsToWinner';
 
-// ─── 3D SVG Action Button ─────────────────────────────────────────────────────
+// ─── WinZO-style Action Button ────────────────────────────────────────────────
 type ActionVariant = 'fold' | 'check' | 'call' | 'raise' | 'allin';
 
-// Palette per variant: [topLight, topMid, topDark, sideDark, textColor, glow]
+// Palette per variant: gradient top→bottom + dark edge (3D press) + glow
 const ACTION_3D: Record<ActionVariant, {
-  topLight: string; topMid: string; topDark: string;
-  sideDark: string; text: string; glow: string;
+  top: string; bottom: string; edge: string; text: string; glow: string;
 }> = {
-  fold:  { topLight:'#fca5a5', topMid:'#ef4444', topDark:'#991b1b', sideDark:'#450a0a', text:'#fff5f5', glow:'rgba(239,68,68,0.55)'  },
-  check: { topLight:'#7dd3fc', topMid:'#0ea5e9', topDark:'#0369a1', sideDark:'#0c2340', text:'#f0f9ff', glow:'rgba(14,165,233,0.55)' },
-  call:  { topLight:'#6ee7b7', topMid:'#10b981', topDark:'#065f46', sideDark:'#022c22', text:'#ecfdf5', glow:'rgba(16,185,129,0.55)' },
-  raise: { topLight:'#d8b4fe', topMid:'#a855f7', topDark:'#6b21a8', sideDark:'#2e1065', text:'#faf5ff', glow:'rgba(168,85,247,0.55)' },
-  allin: { topLight:'#fde68a', topMid:'#f59e0b', topDark:'#b45309', sideDark:'#451a03', text:'#fffbeb', glow:'rgba(245,158,11,0.6)'  },
+  fold:  { top:'#f87171', bottom:'#dc2626', edge:'#7f1d1d', text:'#ffffff', glow:'rgba(239,68,68,0.45)'  },
+  check: { top:'#38bdf8', bottom:'#0284c7', edge:'#075985', text:'#ffffff', glow:'rgba(14,165,233,0.45)' },
+  call:  { top:'#34d399', bottom:'#059669', edge:'#064e3b', text:'#ffffff', glow:'rgba(16,185,129,0.45)' },
+  raise: { top:'#c084fc', bottom:'#9333ea', edge:'#581c87', text:'#ffffff', glow:'rgba(168,85,247,0.45)' },
+  allin: { top:'#fbbf24', bottom:'#d97706', edge:'#78350f', text:'#ffffff', glow:'rgba(245,158,11,0.5)'  },
 };
 
 const ActionBtn: React.FC<{
@@ -690,111 +682,32 @@ const ActionBtn: React.FC<{
   disabled?: boolean;
   variant:   ActionVariant;
 }> = memo(({ label, sublabel, onClick, disabled, variant }) => {
-  const c        = ACTION_3D[variant];
-  const uid      = `${variant}-${label}`.replace(/\s+/g,'-');
-  const gradTop  = `gradTop-${uid}`;
-  const gradSide = `gradSide-${uid}`;
-  const gradGloss= `gradGloss-${uid}`;
-  const gradRim  = `gradRim-${uid}`;
-  const filterId = `blur-${uid}`;
+  const c = ACTION_3D[variant];
 
   return (
     <button
-      className="svg-btn3d"
+      className="wz-btn"
       onClick={onClick}
       disabled={disabled}
-      style={{ filter: disabled ? undefined : `drop-shadow(0 6px 14px ${c.glow})` }}
+      style={{
+        background: `linear-gradient(180deg, ${c.top} 0%, ${c.bottom} 100%)`,
+        borderBottom: `4px solid ${c.edge}`,
+        boxShadow: disabled ? 'none' : `0 4px 12px ${c.glow}, inset 0 1px 0 rgba(255,255,255,0.35)`,
+        color: c.text,
+      }}
     >
-      <svg viewBox="0 0 120 56" preserveAspectRatio="none" aria-hidden>
-        <defs>
-          {/* Top face gradient */}
-          <linearGradient id={gradTop} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%"  stopColor={c.topLight} />
-            <stop offset="45%" stopColor={c.topMid}   />
-            <stop offset="100%"stopColor={c.topDark}  />
-          </linearGradient>
-          {/* Side face gradient (base) */}
-          <linearGradient id={gradSide} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%"   stopColor={c.topDark}  />
-            <stop offset="100%" stopColor={c.sideDark} />
-          </linearGradient>
-          {/* Glossy highlight */}
-          <linearGradient id={gradGloss} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%"   stopColor="#ffffff" stopOpacity="0.55" />
-            <stop offset="60%"  stopColor="#ffffff" stopOpacity="0.05" />
-            <stop offset="100%" stopColor="#ffffff" stopOpacity="0"    />
-          </linearGradient>
-          {/* Metallic rim light — top edge bright, bottom edge dark */}
-          <linearGradient id={gradRim} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%"   stopColor="#ffffff" stopOpacity="0.65" />
-            <stop offset="35%"  stopColor="#ffffff" stopOpacity="0.10" />
-            <stop offset="100%" stopColor="#000000" stopOpacity="0.35" />
-          </linearGradient>
-          <filter id={filterId}>
-            <feGaussianBlur stdDeviation="0.6" />
-          </filter>
-        </defs>
-
-        {/* Base (side / shadow) — stays put so top can push down */}
-        <rect
-          x="2" y="6" width="116" height="48" rx="14"
-          fill={`url(#${gradSide})`}
-          stroke="rgba(0,0,0,0.5)" strokeWidth="1"
-        />
-        {/* Inner base shadow */}
-        <rect
-          x="2" y="6" width="116" height="48" rx="14"
-          fill="none"
-          stroke="rgba(0,0,0,0.4)" strokeWidth="2"
-          filter={`url(#${filterId})`}
-        />
-
-        {/* Top face (this translates on press via CSS) */}
-        <g className="btn-top">
-          <rect
-            x="2" y="0" width="116" height="48" rx="14"
-            fill={`url(#${gradTop})`}
-            stroke="rgba(0,0,0,0.35)" strokeWidth="1"
-          />
-          {/* Metallic rim light stroke */}
-          <rect
-            x="3" y="1" width="114" height="46" rx="13"
-            fill="none"
-            stroke={`url(#${gradRim})`} strokeWidth="1.2"
-          />
-          {/* Glossy top-half highlight */}
-          <rect
-            x="6" y="3" width="108" height="22" rx="10"
-            fill={`url(#${gradGloss})`}
-          />
-          {/* Bottom inner rim highlight */}
-          <rect
-            x="4" y="42" width="112" height="4" rx="2"
-            fill="rgba(0,0,0,0.25)"
-          />
-        </g>
-      </svg>
-
-      {/* Animated shine sweep */}
-      <span className="btn-sheenwrap" aria-hidden>
-        <span className="btn-sheen" />
-      </span>
-
-      {/* Label overlay (also translates with top face) */}
-      <span className="btn-label" style={{ color: c.text }}>
+      <span style={{
+        fontSize: sublabel ? 13 : 14.5, fontWeight: 900, letterSpacing: 0.8,
+        lineHeight: 1, textTransform: 'uppercase',
+        textShadow: '0 1px 2px rgba(0,0,0,0.35)',
+      }}>{label}</span>
+      {sublabel && (
         <span style={{
-          fontSize: sublabel ? 13 : 14.5, fontWeight: 900, letterSpacing: 1.1,
-          lineHeight: 1, textTransform: 'uppercase',
-          textShadow: '0 1px 2px rgba(0,0,0,0.55), 0 0 10px rgba(0,0,0,0.25)',
-        }}>{label}</span>
-        {sublabel && (
-          <span style={{
-            fontSize: 9.5, fontWeight: 800, opacity: 0.95, marginTop: 2.5,
-            letterSpacing: 0.5,
-            textShadow: '0 1px 1.5px rgba(0,0,0,0.5)',
-          }}>{sublabel}</span>
-        )}
-      </span>
+          fontSize: 10, fontWeight: 800, opacity: 0.95, marginTop: 3,
+          letterSpacing: 0.3,
+          textShadow: '0 1px 1.5px rgba(0,0,0,0.3)',
+        }}>{sublabel}</span>
+      )}
     </button>
   );
 });

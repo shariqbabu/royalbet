@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
 import { doc, onSnapshot } from 'firebase/firestore';
@@ -684,7 +684,8 @@ const JokerPairGame: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const [game, setGame] = useState<JokerPairGameState | null>(null);
+  const [gameRaw, setGameRaw] = useState<JokerPairGameState | null>(null);
+  const [tableInfo, setTableInfo] = useState<{ status: string; players: string[] } | null>(null);
   const [myPriv, setMyPriv] = useState<MyPrivateState | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionBusy, setActionBusy] = useState(false);
@@ -717,7 +718,12 @@ const JokerPairGame: React.FC = () => {
     const ref = doc(db, 'jokerPairGames', tableId);
     const unsub = onSnapshot(ref, (snap) => {
       if (snap.exists()) {
-        setGame(snap.data() as JokerPairGameState);
+        setGameRaw(snap.data() as JokerPairGameState);
+      } else {
+        // BUG FIX: purana game doc delete hone pe (cleanup) stale state clear
+        // karo — pehle single player naye round mein aata to purane game ka
+        // timer/screen dikh jata tha
+        setGameRaw(null);
       }
       setLoading(false);
     });
@@ -738,8 +744,9 @@ const JokerPairGame: React.FC = () => {
     if (!tableId || !user) return;
     const tableRef = doc(db, 'jokerPairTables', tableId);
     const unsub = onSnapshot(tableRef, async (snap) => {
-      if (!snap.exists()) return;
+      if (!snap.exists()) { setTableInfo(null); return; }
       const t = snap.data();
+      setTableInfo({ status: t.status || 'waiting', players: t.players || [] });
       if (t.status === 'waiting' && t.players?.length >= 2) {
         try {
           await startGame(tableId);
@@ -748,6 +755,16 @@ const JokerPairGame: React.FC = () => {
     });
     return () => unsub();
   }, [tableId, user]);
+
+  // BUG FIX: game screen/timer sirf tab jab TABLE bhi playing ho aur game doc
+  // valid ho. Pehle sirf game doc dekha jata tha — single player naye round
+  // mein purane (stale) game doc ka timer dekh leta tha.
+  const game = useMemo(() => {
+    if (!gameRaw) return null;
+    if (tableInfo && tableInfo.status === 'waiting') return null; // naya round — stale doc ignore
+    if ((gameRaw.players?.length || 0) < 2) return null;          // single player pe game nahi
+    return gameRaw;
+  }, [gameRaw, tableInfo]);
 
   // ── Auto-discard timer ───────────────────────────────────────────────────
 
@@ -968,7 +985,11 @@ const JokerPairGame: React.FC = () => {
           🃏
         </motion.div>
         <p className="text-white/40 font-medium">Waiting for game to start…</p>
-        <p className="text-white/20 text-xs">Players needed</p>
+        <p className="text-white/20 text-xs">
+          {tableInfo
+            ? `${tableInfo.players.length}/2 players joined — starts at 2`
+            : 'Players needed'}
+        </p>
 
         {/* Leave & Refund */}
         <motion.button

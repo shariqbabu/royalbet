@@ -198,7 +198,7 @@ const PokerLobbyPage: React.FC = () => {
               return (
                 <LobbyCard key={table.id} accent="purple">
                   {/* Header */}
-                  <div className="mb-3 flex items-start justify-between gap-3">
+                  <div className="mb-3 flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
                     <div className="min-w-0 flex-1">
                       <h3 className="truncate text-base font-black text-white">
                         {table.name}
@@ -206,8 +206,11 @@ const PokerLobbyPage: React.FC = () => {
                       <div className="mt-2 flex flex-wrap items-center gap-2">
                         <InfoChip accent={stakeInfo.accent}>{stakeInfo.label}</InfoChip>
                         <InfoChip accent={isPlaying ? 'orange' : activePlayers.length >= 2 ? 'emerald' : 'blue'}>
-                          {isPlaying ? 'Active' : activePlayers.length >= 2 ? 'Ready' : 'Waiting'}
+                          {isPlaying ? '🔴 Live' : activePlayers.length >= 2 ? 'Ready' : 'Waiting'}
                         </InfoChip>
+                        {isPlaying && (table.pot || 0) > 0 && (
+                          <InfoChip icon={Coins} accent="yellow">Pot {formatCurrency(table.pot)}</InfoChip>
+                        )}
                         {spectators > 0 && (
                           <InfoChip icon={Eye} accent="blue">{spectators} watching</InfoChip>
                         )}
@@ -220,40 +223,40 @@ const PokerLobbyPage: React.FC = () => {
                         const player = table.players.find((p) => p.seatIndex === i && p.seatStatus !== 'LEFT_SEAT');
                         const isMe = player?.uid === user?.uid;
                         return (
-                          <div key={i} className={`flex h-7 w-7 items-center justify-center rounded-full border text-xs font-bold ${
+                          <div key={i} className={`flex h-6 w-6 items-center justify-center rounded-full border text-[10px] font-bold sm:h-7 sm:w-7 sm:text-xs ${
                             player
                               ? isMe
-                                ? 'border-purple-400 bg-purple-600 text-white'
-                                : 'border-white/10 bg-white/10 text-white'
-                              : 'border-white/10 bg-black/30 text-gray-600'
+                                ? 'border-purple-400 bg-purple-600 text-white shadow-md shadow-purple-500/40'
+                                : 'border-white/15 bg-gradient-to-b from-white/15 to-white/5 text-white'
+                              : 'border-dashed border-white/10 bg-black/30 text-gray-700'
                           }`}>
-                            {player ? player.name.charAt(0).toUpperCase() : '·'}
+                            {player ? player.name.charAt(0).toUpperCase() : ''}
                           </div>
                         );
                       })}
                     </div>
                   </div>
 
-                  {/* Stats Grid */}
-                  <div className="mb-3 grid grid-cols-2 gap-2">
+                  {/* Stats — mobile pe compact 4-col strip */}
+                  <div className="mb-3 grid grid-cols-4 gap-1.5 sm:gap-2">
                     {([
                       ['Blinds', `${formatCurrency(table.smallBlind)}/${formatCurrency(table.bigBlind)}`],
-                      ['Players', `${activePlayers.length}/6`],
-                      ['Min Buy-in', formatCurrency(table.minBuyIn)],
-                      ['Max Buy-in', formatCurrency(table.maxBuyIn)],
+                      ['Seats', `${activePlayers.length}/6`],
+                      ['Min Buy', formatCurrency(table.minBuyIn)],
+                      ['Max Buy', formatCurrency(table.maxBuyIn)],
                     ] as [string, string][]).map(([label, value]) => (
-                      <div key={label} className="rounded-2xl border border-white/10 bg-black/20 p-3">
-                        <p className="mb-1 text-[11px] text-gray-500">{label}</p>
-                        <p className="text-xs font-bold text-white">{value}</p>
+                      <div key={label} className="rounded-xl border border-white/10 bg-black/20 px-1.5 py-2 text-center sm:rounded-2xl sm:p-3 sm:text-left">
+                        <p className="mb-0.5 text-[9px] text-gray-500 sm:mb-1 sm:text-[11px]">{label}</p>
+                        <p className="whitespace-nowrap text-[10px] font-bold text-white sm:text-xs">{value}</p>
                       </div>
                     ))}
                   </div>
 
-                  {/* Active Player tags */}
+                  {/* Active Player tags — mobile pe max 3 + counter */}
                   {activePlayers.length > 0 && (
                     <div className="mb-3 flex flex-wrap gap-1.5">
-                      {activePlayers.map((p) => (
-                        <span key={p.uid} className={`rounded-full border px-2 py-1 text-[11px] ${
+                      {activePlayers.slice(0, 4).map((p) => (
+                        <span key={p.uid} className={`max-w-[90px] truncate rounded-full border px-2 py-1 text-[10px] sm:text-[11px] ${
                           p.uid === user?.uid
                             ? 'border-purple-500/30 bg-purple-500/10 text-purple-400'
                             : 'border-white/10 bg-white/[0.03] text-gray-400'
@@ -261,6 +264,11 @@ const PokerLobbyPage: React.FC = () => {
                           {p.uid === user?.uid ? 'You' : p.name}
                         </span>
                       ))}
+                      {activePlayers.length > 4 && (
+                        <span className="rounded-full border border-white/10 bg-white/[0.03] px-2 py-1 text-[10px] text-gray-500 sm:text-[11px]">
+                          +{activePlayers.length - 4} more
+                        </span>
+                      )}
                     </div>
                   )}
 
@@ -320,7 +328,8 @@ const PokerLobbyPage: React.FC = () => {
           <motion.div
             initial={{ y: 40, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            className="w-full rounded-t-3xl border border-white/10 bg-[#0b0716] p-5 shadow-2xl md:max-w-md md:rounded-3xl"
+            className="max-h-[90dvh] w-full overflow-y-auto rounded-t-3xl border border-white/10 bg-[#0b0716] p-5 shadow-2xl md:max-w-md md:rounded-3xl"
+            style={{ paddingBottom: 'calc(20px + env(safe-area-inset-bottom))' }}
           >
             <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-white/20 md:hidden" />
 
@@ -397,6 +406,20 @@ const PokerLobbyPage: React.FC = () => {
                   max={Math.min(selectedTable.maxBuyIn, usable)}
                   className="w-full rounded-2xl border border-white/10 bg-black/30 py-3 pl-9 pr-4 text-sm font-bold text-white outline-none transition focus:border-purple-500"
                 />
+              </div>
+              {/* Slider — mobile pe amount adjust karna easy */}
+              <input
+                type="range"
+                min={selectedTable.minBuyIn}
+                max={Math.max(selectedTable.minBuyIn, Math.min(selectedTable.maxBuyIn, usable))}
+                step={selectedTable.bigBlind || 10}
+                value={Math.min(buyIn, Math.min(selectedTable.maxBuyIn, usable))}
+                onChange={(e) => setBuyIn(Number(e.target.value))}
+                className="mt-3 w-full accent-purple-500"
+              />
+              <div className="mt-1 flex justify-between text-[10px] text-gray-600">
+                <span>{formatCurrency(selectedTable.minBuyIn)}</span>
+                <span>{formatCurrency(Math.min(selectedTable.maxBuyIn, usable))}</span>
               </div>
             </div>
 

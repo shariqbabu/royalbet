@@ -24,6 +24,7 @@ export interface GamePlayer {
   avatar:    string;
   handCount: number;   // sirf count — asli cards private/{uid} doc mein
   hasActed:  boolean;
+  missedTurns?: number; // 3 missed turns = forfeit
 }
 
 export interface JokerPairTable {
@@ -53,9 +54,11 @@ export interface JokerPairGameState {
   prizePool:        number;
   entryFee:         number;
   winnerId:         string | null;
+  loserId?:         string | null;
   winnerGroups:     PlayerGroup[] | null;
   startedAt:        any;
   finishedAt:       any;
+  finishReason?:    'declare' | 'player_left' | 'turn_forfeit';
   payoutDone:       boolean;
 }
 

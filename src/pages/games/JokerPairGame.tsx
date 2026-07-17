@@ -368,6 +368,7 @@ const OpponentStrip = ({
   isCurrentTurn,
   isHost,
   isMe,
+  missedTurns = 0,
 }: {
   name: string;
   avatar: string;
@@ -375,6 +376,7 @@ const OpponentStrip = ({
   isCurrentTurn: boolean;
   isHost: boolean;
   isMe?: boolean;
+  missedTurns?: number;
 }) => (
   <motion.div
     layout
@@ -418,6 +420,14 @@ const OpponentStrip = ({
         {isMe && (
           <span className="text-[8px] font-black text-violet-300 bg-violet-500/20 px-1.5 py-0.5 rounded-full shrink-0">
             YOU
+          </span>
+        )}
+        {/* Missed turns warning indicator */}
+        {missedTurns > 0 && (
+          <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full shrink-0 ${
+            missedTurns >= 2 ? 'text-red-300 bg-red-500/30' : 'text-orange-300 bg-orange-500/20'
+          }`}>
+            ⚠️ {missedTurns}/3
           </span>
         )}
       </p>
@@ -799,6 +809,18 @@ const JokerPairGame: React.FC = () => {
   const isMyTurn = !!game && game.currentTurnUid === myUid;
   useEffect(() => { if (isMyTurn) haptic('medium'); }, [isMyTurn]);
 
+  // ── Missed turns warning ─────────────────────────────────────────────────
+  const myMissedTurns = game?.playerData?.[myUid]?.missedTurns || 0;
+  useEffect(() => {
+    if (!game || game.status !== 'playing') return;
+    if (myMissedTurns === 1) {
+      toast('⚠️ 1 turn missed! 2 more and you forfeit.', { icon: '⚠️', duration: 4000 });
+    } else if (myMissedTurns === 2) {
+      toast.error('🚨 2 turns missed! Next miss = FORFEIT!', { duration: 5000 });
+      haptic('warning');
+    }
+  }, [myMissedTurns, game?.status]);
+
   // ── Auto-discard timer ───────────────────────────────────────────────────
 
   useEffect(() => {
@@ -832,10 +854,22 @@ const JokerPairGame: React.FC = () => {
     if (isWinner) {
       const pool = game.prizePool;
       const win = Math.floor(pool * 0.9);
-      toast.success(`🏆 You won ₹${win}!`);
+      // Forfeit win pe alag message
+      if (game.finishReason === 'turn_forfeit') {
+        toast.success(`🏆 Opponent timed out! You won ₹${win}!`);
+      } else if (game.finishReason === 'player_left') {
+        toast.success(`🏆 Opponent left! You won ₹${win}!`);
+      } else {
+        toast.success(`🏆 You won ₹${win}!`);
+      }
       haptic('win');
     } else {
-      toast.error('Match lost. Better luck next time!');
+      // Loser ko batao kya hua
+      if (game.finishReason === 'turn_forfeit' && game.loserId === myUid) {
+        toast.error('⏱️ You missed 3 turns — game forfeited!');
+      } else {
+        toast.error('Match lost. Better luck next time!');
+      }
     }
 
     const cleanup = setTimeout(async () => {
@@ -1231,6 +1265,7 @@ const JokerPairGame: React.FC = () => {
                     ? myHand.length
                     : p?.handCount ?? 5;
                   const isTurn = game.currentTurnUid === uid;
+                  const missed = p?.missedTurns || 0;
                   return (
                     <div
                       key={uid}
@@ -1271,6 +1306,14 @@ const JokerPairGame: React.FC = () => {
                           {isMe && (
                             <span className="text-[7px] font-black text-violet-300 bg-violet-500/20 px-1 py-0.5 rounded shrink-0">
                               YOU
+                            </span>
+                          )}
+                          {/* Missed turns warning */}
+                          {missed > 0 && (
+                            <span className={`text-[7px] font-black px-1 py-0.5 rounded shrink-0 ${
+                              missed >= 2 ? 'text-red-300 bg-red-500/30' : 'text-orange-300 bg-orange-500/20'
+                            }`}>
+                              ⚠️{missed}
                             </span>
                           )}
                         </div>

@@ -62,7 +62,9 @@ const SANITIZE_RULES = {
   photoURL:    { type: 'string', maxLen: 200, pattern: /^https?:\/\/.+$/, optional: true },
   bid:         { type: 'number', min: 1,    max: 13,                                     },
   isReady:     { type: 'string', maxLen: 5, pattern: /^(true|false)$/,                   },
-  cardId: { type: 'string', maxLen: 2, pattern: /^[2-9TJQKA][cdhs]$/i, },
+  // "10h" 3 chars hota hai — pehle maxLen 2 tha to 10-rank cards kabhi
+  // discard nahi ho paate the (API reject karta tha)
+  cardId: { type: 'string', maxLen: 3, pattern: /^(?:[2-9]|10|[TJQKA])[cdhs]$/i, },
 
 } as const;
 

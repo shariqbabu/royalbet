@@ -298,14 +298,24 @@ async function handleAction(req: VercelRequest, res: VercelResponse, uid: string
     // ── pickDraw ──────────────────────────────────────────────────────────────
     if (action === 'pickDraw') {
       if (hand.length !== 5) throw new Error('Already picked a card this turn');
-      const drawPile: string[] = [...(srvSnap.data()?.drawPile || [])];
-      if (drawPile.length === 0) throw new Error('Draw pile is empty');
+      let drawPile: string[] = [...(srvSnap.data()?.drawPile || [])];
+      let discardPile: string[] = [...(game.discardPile || [])];
+
+      // Draw pile khali? Discard pile (top card chhod ke) shuffle karke naya
+      // draw pile banao — pehle yahan error aata tha aur game atak jata tha
+      if (drawPile.length === 0) {
+        if (discardPile.length <= 1) throw new Error('No cards left to draw');
+        const top   = discardPile.pop()!;
+        drawPile    = shuffle(discardPile);
+        discardPile = [top];
+      }
 
       const pickedId = drawPile.pop()!;
       tx.update(srvRef, { drawPile });
       tx.update(myPrivRef, { hand: [...hand, pickedId] });
       tx.update(gameRef, {
         drawCount: drawPile.length,
+        discardPile,
         [`playerData.${uid}.handCount`]: hand.length + 1,
       });
       return { action: 'pickDraw', cardId: pickedId };

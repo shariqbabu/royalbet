@@ -149,10 +149,21 @@ export function subscribeMyHand(
   tableId: string,
   myUid: string,
   cb: (priv: MyPrivateState | null) => void,
+  onError?: (err: Error) => void,
 ): Unsubscribe {
-  return onSnapshot(doc(db, 'jokerPairGames', tableId, 'private', myUid), snap => {
-    cb(snap.exists() ? (snap.data() as MyPrivateState) : null);
-  });
+  return onSnapshot(
+    doc(db, 'jokerPairGames', tableId, 'private', myUid),
+    snap => {
+      cb(snap.exists() ? (snap.data() as MyPrivateState) : null);
+    },
+    err => {
+      // Permission denied = Firestore rules private doc read block kar rahe
+      // hain — pehle yeh silently fail hota tha aur player ke cards kabhi
+      // nahi dikhte the
+      console.error('[JokerPair] subscribeMyHand failed:', err);
+      onError?.(err);
+    },
+  );
 }
 
 export function subscribeOpenTables(

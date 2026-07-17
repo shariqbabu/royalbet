@@ -359,7 +359,7 @@ const PairSlot = ({
   );
 };
 
-// ─── Opponent Strip ───────────────────────────────────────────────────────────
+// ─── Player Strip (sab players — apna bhi) ────────────────────────────────────
 
 const OpponentStrip = ({
   name,
@@ -367,12 +367,14 @@ const OpponentStrip = ({
   cardCount,
   isCurrentTurn,
   isHost,
+  isMe,
 }: {
   name: string;
   avatar: string;
   cardCount: number;
   isCurrentTurn: boolean;
   isHost: boolean;
+  isMe?: boolean;
 }) => (
   <motion.div
     layout
@@ -411,8 +413,17 @@ const OpponentStrip = ({
     </div>
 
     <div className="flex-1 min-w-0">
-      <p className="text-xs font-semibold text-white truncate">{name}</p>
-      <p className="text-[10px] text-white/30 font-medium">{cardCount} cards</p>
+      <p className="text-xs font-semibold text-white truncate flex items-center gap-1">
+        {name}
+        {isMe && (
+          <span className="text-[8px] font-black text-violet-300 bg-violet-500/20 px-1.5 py-0.5 rounded-full shrink-0">
+            YOU
+          </span>
+        )}
+      </p>
+      <p className={`text-[10px] font-medium ${isCurrentTurn ? 'text-violet-300' : 'text-white/30'}`}>
+        {isCurrentTurn ? '● Playing turn…' : `${cardCount} cards`}
+      </p>
     </div>
 
     <div className="flex gap-0.5 shrink-0">
@@ -627,10 +638,12 @@ const LeaveConfirmModal = ({
   onConfirm,
   onCancel,
   busy,
+  isPlaying,
 }: {
   onConfirm: () => void;
   onCancel: () => void;
   busy: boolean;
+  isPlaying: boolean;
 }) => (
   <motion.div
     className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md"
@@ -651,7 +664,9 @@ const LeaveConfirmModal = ({
         </div>
         <h3 className="text-lg font-bold text-white mb-1">Leave Table?</h3>
         <p className="text-xs text-white/35 leading-relaxed">
-          Your entry fee will be refunded. The game will end for all players.
+          {isPlaying
+            ? 'Game is running — you will LOSE and get NO refund. Your opponent wins the prize.'
+            : 'Your entry fee will be refunded.'}
         </p>
       </div>
       <div className="flex gap-2.5">
@@ -736,7 +751,12 @@ const JokerPairGame: React.FC = () => {
 
   useEffect(() => {
     if (!tableId || !myUid) return;
-    const unsub = subscribeMyHand(tableId, myUid, setMyPriv);
+    const unsub = subscribeMyHand(tableId, myUid, setMyPriv, (err) => {
+      // Permission error visible karo — pehle cards silently gayab rehte the
+      if ((err as any)?.code === 'permission-denied') {
+        toast.error('Cards load nahi ho paye — Firestore rules check karo (private doc read)');
+      }
+    });
     return () => unsub();
   }, [tableId, myUid]);
 
@@ -824,13 +844,23 @@ const JokerPairGame: React.FC = () => {
   }, [game?.status, game?.winnerId]);
 
   // ── Leave table ──────────────────────────────────────────────────────────
+  // BUG FIX: pehle cleanupTable() call hota tha jo no-op hai (Promise.resolve)
+  // — server ko leave ka pata hi nahi chalta tha aur hamesha "refunded" toast
+  // dikhta tha. Ab asli leaveTable() API — waiting = refund, running = koi
+  // refund nahi (opponent jeet jata hai).
 
   const handleLeave = async () => {
     if (!tableId || leaveBusy) return;
     setLeaveBusy(true);
     try {
-      await cleanupTable(tableId);
-      toast.success('Entry fee refunded');
+      const res: any = await leaveTable(tableId);
+      if (res?.refunded && res.refunded > 0) {
+        toast.success(`Entry fee ₹${res.refunded} refunded`);
+      } else if (res?.finishReason === 'player_left') {
+        toast('You left the game — no refund for leaving a running game', { icon: '⚠️' });
+      } else {
+        toast.success('Left the table');
+      }
       navigate('/games/joker-pair');
     } catch (e: any) {
       toast.error(e.message || 'Failed to leave');
@@ -1019,6 +1049,7 @@ const JokerPairGame: React.FC = () => {
               onConfirm={handleLeave}
               onCancel={() => setShowLeaveModal(false)}
               busy={leaveBusy}
+              isPlaying={false}
             />
           )}
         </AnimatePresence>
@@ -1042,7 +1073,6 @@ const JokerPairGame: React.FC = () => {
     validateDeclare(myHand, myGroups, game.jokerRank, FULL_DECK).valid;
 
   const canDeclare = isMyTurn && hasPicked && groupsAreValid;
-  const opponents = game.players.filter((uid) => uid !== myUid);
 
   const validPairCount = myGroups.filter(
     (g) =>
@@ -1162,27 +1192,33 @@ const JokerPairGame: React.FC = () => {
           </div>
 
           <div className="px-3 pt-3 pb-4 space-y-3">
-            {/* ── Opponents ──────────────────────────────────────────── */}
+            {/* ── All Players (turn indicator ke saath) ──────────────── */}
             <div
               className={`grid gap-2 ${
-                opponents.length === 1
-                  ? 'grid-cols-1'
-                  : opponents.length === 2
+                game.players.length <= 2
                   ? 'grid-cols-2'
-                  : 'grid-cols-3'
+                  : game.players.length === 3
+                  ? 'grid-cols-3'
+                  : 'grid-cols-2'
               }`}
             >
-              {opponents.map((uid) => {
-                const p = game.playerData[uid];
-                if (!p) return null;
+              {game.players.map((uid) => {
+                const p = game.playerData?.[uid];
+                const isMe = uid === myUid;
+                // Fallback: playerData missing ho to bhi player dikhna chahiye
+                const name = p?.name || (isMe ? 'You' : 'Player');
+                const cardCount = isMe
+                  ? myHand.length
+                  : p?.handCount ?? 5;
                 return (
                   <OpponentStrip
                     key={uid}
-                    name={p.name}
-                    avatar={p.avatar}
-                    cardCount={p.handCount ?? 0}
+                    name={name}
+                    avatar={p?.avatar || ''}
+                    cardCount={cardCount}
                     isCurrentTurn={game.currentTurnUid === uid}
                     isHost={uid === (game as any).hostId}
+                    isMe={isMe}
                   />
                 );
               })}
@@ -1486,6 +1522,7 @@ const JokerPairGame: React.FC = () => {
             onConfirm={handleLeave}
             onCancel={() => setShowLeaveModal(false)}
             busy={leaveBusy}
+            isPlaying={game.status === 'playing'}
           />
         )}
       </AnimatePresence>

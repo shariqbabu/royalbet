@@ -59,6 +59,15 @@ const TypingDots = () => (
   </div>
 );
 
+// ─── Inline markdown ──────────────────────────────────────────────────────────
+// AI replies mein **bold** aata hai — bina react-markdown ke sirf bold parse karo
+const renderInline = (text: string) =>
+  text.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
+    part.startsWith('**') && part.endsWith('**') && part.length > 4
+      ? <strong key={i} className="font-semibold text-white">{part.slice(2, -2)}</strong>
+      : part
+  );
+
 // ─── Message bubble ───────────────────────────────────────────────────────────
 const Bubble: React.FC<{ msg: ChatMsg }> = ({ msg }) => {
   const isUser = msg.role === 'user';
@@ -81,7 +90,7 @@ const Bubble: React.FC<{ msg: ChatMsg }> = ({ msg }) => {
             : 'rounded-bl-md border border-white/10 bg-white/[0.05] text-gray-200'
         }`}
       >
-        {msg.content}
+        {isUser ? msg.content : renderInline(msg.content)}
       </div>
     </motion.div>
   );
@@ -99,7 +108,7 @@ export const Support: React.FC = () => {
   });
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Persist chat locally (last 40 msgs)
@@ -108,9 +117,12 @@ export const Support: React.FC = () => {
     catch { /* storage full — ignore */ }
   }, [messages]);
 
-  // Auto-scroll to newest
+  // Auto-scroll to newest — sirf messages list scroll karo.
+  // scrollIntoView() parent <main> ko bhi scroll kar deta tha, jisse poora
+  // card upar khisak kar header ke peeche chala jata tha.
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const el = listRef.current;
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
   }, [messages, loading]);
 
   const send = async (text?: string) => {
@@ -159,7 +171,10 @@ export const Support: React.FC = () => {
   };
 
   return (
-    <div className="absolute inset-0 flex flex-col bg-[#080512] p-0 sm:p-4 lg:p-6">
+    // Height = viewport − app header (h-16 + 1px border, lg pe h-[68px]).
+    // h-full yahan kaam nahi karta kyunki MainLayout ka animation wrapper
+    // min-h-full hai (auto height), aur absolute inset-0 scroll pe toot-ta tha.
+    <div className="flex h-[calc(100dvh-65px)] flex-col bg-[#080512] p-0 sm:p-4 lg:h-[calc(100dvh-69px)] lg:p-6">
       <div className="relative mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col overflow-hidden bg-[#0b0715]/80 shadow-2xl sm:rounded-3xl sm:border sm:border-white/10">
       {/* Ambient glows */}
       <div className="pointer-events-none absolute -top-20 left-1/2 h-56 w-56 -translate-x-1/2 rounded-full bg-yellow-500/10 blur-3xl" />
@@ -195,7 +210,7 @@ export const Support: React.FC = () => {
       </div>
 
       {/* ── Messages ── */}
-      <div className="relative flex-1 space-y-3 overflow-y-auto px-4 py-4">
+      <div ref={listRef} className="relative min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-4">
         {messages.length === 0 && (
           <motion.div
             initial={{ opacity: 0, y: 14 }}
@@ -247,7 +262,6 @@ export const Support: React.FC = () => {
           </motion.div>
         )}
 
-        <div ref={bottomRef} />
       </div>
 
       {/* ── Composer ── */}

@@ -751,8 +751,13 @@ const JokerPairGame: React.FC = () => {
 
   useEffect(() => {
     if (!tableId || !myUid) return;
-    const unsub = subscribeMyHand(tableId, myUid, setMyPriv, (err) => {
+    console.log('[DEBUG] Subscribing to private hand:', { tableId, myUid });
+    const unsub = subscribeMyHand(tableId, myUid, (priv) => {
+      console.log('[DEBUG] Private hand received:', priv);
+      setMyPriv(priv);
+    }, (err) => {
       // Permission error visible karo — pehle cards silently gayab rehte the
+      console.error('[DEBUG] Private hand error:', err);
       if ((err as any)?.code === 'permission-denied') {
         toast.error('Cards load nahi ho paye — Firestore rules check karo (private doc read)');
       }

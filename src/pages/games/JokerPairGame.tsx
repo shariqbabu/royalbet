@@ -768,6 +768,12 @@ const JokerPairGame: React.FC = () => {
     return gameRaw;
   }, [gameRaw, tableInfo]);
 
+  // ── Haptic on my turn ────────────────────────────────────────────────────
+  // NOTE: yeh hook early-returns (loading / !game) se PEHLE hona zaroori hai,
+  // warna hooks ki count render ke beech badal jaati hai → React error #310.
+  const isMyTurn = !!game && game.currentTurnUid === myUid;
+  useEffect(() => { if (isMyTurn) haptic('medium'); }, [isMyTurn]);
+
   // ── Auto-discard timer ───────────────────────────────────────────────────
 
   useEffect(() => {
@@ -1022,9 +1028,7 @@ const JokerPairGame: React.FC = () => {
 
   // ── Derived ──────────────────────────────────────────────────────────────
 
-  const isMyTurn = game.currentTurnUid === myUid;
-  // Haptic on my turn
-  useEffect(() => { if (isMyTurn) haptic('medium'); }, [isMyTurn]);
+  // (isMyTurn upar hooks section mein hai — early returns se pehle)
   // Hand ab private subcollection se aata hai — main doc mein sirf counts
   const myHand = (myPriv?.hand || []).filter(
     (cid) => cid && cid.trim().length >= 2

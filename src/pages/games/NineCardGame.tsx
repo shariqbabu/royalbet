@@ -200,9 +200,8 @@ export default function NineCardGame() {
     navigate(-1);
   };
 
-  // ── Action helper — press pe haptic + API call ───────────────
-  const act = (fn: () => Promise<unknown>, pattern: 'light' | 'medium' = 'medium') => {
-    haptic(pattern);
+  // ── Action helper — API call (haptic ActionBtn3D ke andar hai) ───────────
+  const act = (fn: () => Promise<unknown>) => {
     fn().catch(() => {});
   };
 
@@ -616,7 +615,7 @@ export default function NineCardGame() {
               <ActionBtn3D
                 label="Pack"
                 variant="fold"
-                onClick={() => act(() => nineCardApi.pack(tableId!), 'light')}
+                onClick={() => act(() => nineCardApi.pack(tableId!))}
               />
 
               {/* SEE — only if not yet seen */}
@@ -624,7 +623,7 @@ export default function NineCardGame() {
                 <ActionBtn3D
                   label="See"
                   variant="see"
-                  onClick={() => act(() => nineCardApi.seeCards(tableId!), 'light')}
+                  onClick={() => act(() => nineCardApi.seeCards(tableId!))}
                 />
               )}
 

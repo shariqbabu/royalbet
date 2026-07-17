@@ -54,6 +54,11 @@ const SUIT_FULL: Record<string, Card['suit']> = {
   d: 'diamonds',
   c: 'clubs',
   s: 'spades',
+  // Nine-card backend suit SYMBOLS use karta hai (id = `${rank}${suit}` jaise "A♠")
+  '♥': 'hearts',
+  '♦': 'diamonds',
+  '♣': 'clubs',
+  '♠': 'spades',
 };
 
 // Card object → "Ah", "Kd", "10c" string

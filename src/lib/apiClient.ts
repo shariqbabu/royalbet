@@ -24,14 +24,14 @@ function getUrl(url: string) {
      if (url.startsWith("/api/tictactoe/"))  return `${CF_API}${url}`;
      if (url.startsWith("/api/tambola/"))    return `${CF_API}${url}`;
   // if (url.startsWith("/api/nine-card/"))  return `${CF_API}${url}`;
-  // if (url.startsWith("/api/joker-pair/")) return `${CF_API}${url}`;
+     if (url.startsWith("/api/joker-pair/")) return `${CF_API}${url}`;
 
   // ── VERCEL (shrq.vercel.app) pe jo games hain — line uncomment karo ───────
   // if (url.startsWith("/api/poker/"))      return `${VERCEL_API}${url}`;
   // if (url.startsWith("/api/realludo/"))   return `${VERCEL_API}${url}`;
   // if (url.startsWith("/api/tictactoe/"))  return `${VERCEL_API}${url}`;
      if (url.startsWith("/api/nine-card/"))  return `${VERCEL_API}${url}`;
-     if (url.startsWith("/api/joker-pair/")) return `${VERCEL_API}${url}`;
+  // if (url.startsWith("/api/joker-pair/")) return `${VERCEL_API}${url}`;
 
   // Baaki sab (wallet, voucher, etc.) current project (same-origin) par
   return url;

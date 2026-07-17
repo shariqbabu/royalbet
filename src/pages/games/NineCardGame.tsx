@@ -169,6 +169,8 @@ export default function NineCardGame() {
         isDraw: table.isDraw,
       });
       setShowResult(true);
+      // Winner ko alag effect se 'win' pattern milta hai — baaki ko subtle buzz
+      if (table.winnerId !== myUid) haptic('medium');
       autoResetFiredRef.current = false;
 
       const timer = setTimeout(() => {
@@ -190,11 +192,18 @@ export default function NineCardGame() {
 
   // ── Exit ────────────────────────────────────────────────────
   const handleExit = async () => {
+    haptic('light');
     if (tableId) {
       try { await nineCardApi.leave(tableId); }
       catch (err) { console.error('Leave failed', err); }
     }
     navigate(-1);
+  };
+
+  // ── Action helper — press pe haptic + API call ───────────────
+  const act = (fn: () => Promise<unknown>, pattern: 'light' | 'medium' = 'medium') => {
+    haptic(pattern);
+    fn().catch(() => {});
   };
 
   // ── Seat layout ─────────────────────────────────────────────
@@ -229,7 +238,8 @@ export default function NineCardGame() {
 
   return (
     <div style={{
-      width: "100%", height: "100dvh", background: "#080512",
+      width: "100%", height: "100dvh",
+      background: "radial-gradient(circle at 50% 30%, #100c20 0%, #080512 55%, #04020a 100%)",
       overflow: "hidden", color: "#fff", fontFamily: "sans-serif", position: "relative",
       userSelect: "none", display: 'flex', flexDirection: 'column',
     }}>
@@ -245,57 +255,109 @@ export default function NineCardGame() {
 
       {/* ── Header ── */}
       <div style={{
-        flexShrink: 0, padding: "12px 15px",
+        flexShrink: 0, padding: "10px 14px",
         display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 50,
+        background: "rgba(4,3,8,0.85)", backdropFilter: "blur(20px)",
+        borderBottom: "1px solid rgba(255,255,255,0.05)",
       }}>
         <button onClick={handleExit} style={{
-          background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
-          color: "#fff", padding: "7px 13px", borderRadius: 12,
-          display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 700, cursor: "pointer",
+          background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.22)",
+          color: "#f87171", padding: "7px 13px", borderRadius: 12,
+          display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 800, cursor: "pointer",
         }}>
-          <ArrowLeft size={15}/> Exit
+          <ArrowLeft size={14}/> Exit
         </button>
 
         <div style={{
-          display: 'flex', alignItems: 'center', gap: 6,
-          background: "rgba(234,179,8,0.08)", border: `1px solid rgba(234,179,8,0.25)`,
-          padding: "5px 14px", borderRadius: 14,
+          display: 'flex', alignItems: 'center', gap: 7,
+          background: "linear-gradient(180deg,rgba(234,179,8,0.14),rgba(234,179,8,0.05))",
+          border: `1px solid rgba(234,179,8,0.3)`,
+          padding: "6px 14px", borderRadius: 99,
+          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
         }}>
-          <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700 }}>BOOT ₹{table.bootAmount}</span>
+          <Coins size={12} color={G.m} />
+          <span style={{ fontSize: 9, color: '#94a3b8', fontWeight: 800, letterSpacing: 1 }}>BOOT</span>
+          <span style={{ fontSize: 12, color: G.l, fontWeight: 900 }}>₹{table.bootAmount}</span>
         </div>
 
         <div style={{
-          textAlign: "right", background: "rgba(15,23,42,0.8)",
-          padding: "5px 13px", borderRadius: 14, border: "1px solid rgba(255,255,255,0.08)",
+          textAlign: "right", background: "rgba(15,23,42,0.7)",
+          padding: "5px 13px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.08)",
+          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)',
         }}>
-          <div style={{ fontSize: 9, color: '#64748b', fontWeight: 700, letterSpacing: 0.5 }}>BALANCE</div>
-          <div style={{ color: G.l, fontWeight: 900, fontSize: 14 }}>₹{amount}</div>
+          <div style={{ fontSize: 8, color: '#64748b', fontWeight: 800, letterSpacing: 1 }}>BALANCE</div>
+          <div style={{ color: G.l, fontWeight: 900, fontSize: 14, lineHeight: 1.2 }}>₹{amount}</div>
         </div>
       </div>
 
       {/* ── Table Area ── */}
       <div style={{ flex: 1, position: "relative", minHeight: 0 }}>
-        {/* Oval felt — poker-style layered */}
+        {/* Under-glow — table ke neeche soft gold ambience */}
+        <div style={{
+          position: "absolute", top: "50%", left: "50%",
+          transform: "translate(-50%, -50%)",
+          width: "90%", height: "70%", borderRadius: "1000px",
+          background: "radial-gradient(ellipse, rgba(234,179,8,0.09), transparent 70%)",
+          filter: "blur(28px)", pointerEvents: "none",
+        }} />
+
+        {/* Metallic gold rim — premium casino edge */}
         <div style={{
           position: "absolute", top: "50%", left: "50%",
           transform: "translate(-50%, -50%)",
           width: "84%", height: "62%", borderRadius: "1000px",
-          background: "linear-gradient(135deg,#78350f 0%,#451a03 100%)",
-          padding: 7,
-          boxShadow: "0 20px 50px rgba(0,0,0,0.9)",
+          background: "linear-gradient(160deg,#fde68a 0%,#a16207 22%,#713f12 48%,#fbbf24 76%,#854d0e 100%)",
+          padding: 2.5,
+          boxShadow: "0 24px 60px rgba(0,0,0,0.9), 0 0 44px rgba(234,179,8,0.10)",
         }}>
+          {/* Wood rail — walnut sheen */}
           <div style={{
             width: "100%", height: "100%", borderRadius: "1000px",
-            background: "radial-gradient(ellipse at 50% 35%, #065f46 0%, #064e3b 45%, #022c22 100%)",
-            boxShadow: "inset 0 0 60px rgba(0,0,0,0.75), inset 0 2px 12px rgba(255,255,255,0.06)",
-            border: "1px solid rgba(234,179,8,0.15)",
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: "linear-gradient(135deg,#4a2410 0%,#2a1206 45%,#52301a 100%)",
+            padding: 9,
+            boxShadow: "inset 0 2px 6px rgba(255,255,255,0.12), inset 0 -3px 10px rgba(0,0,0,0.65)",
           }}>
-            {/* Inner line — casino felt detail */}
+            {/* Inner gold pinline */}
             <div style={{
-              width: "78%", height: "70%", borderRadius: "1000px",
-              border: "1.5px solid rgba(255,255,255,0.06)",
-            }} />
+              width: "100%", height: "100%", borderRadius: "1000px",
+              background: "linear-gradient(180deg,rgba(234,179,8,0.55),rgba(234,179,8,0.12))",
+              padding: 1.5,
+            }}>
+              {/* Felt */}
+              <div style={{
+                width: "100%", height: "100%", borderRadius: "1000px",
+                position: "relative", overflow: "hidden",
+                background: "radial-gradient(ellipse at 50% 28%, #0c8a60 0%, #065f46 42%, #043b2b 72%, #02291d 100%)",
+                boxShadow: "inset 0 0 70px rgba(0,0,0,0.8), inset 0 2px 14px rgba(255,255,255,0.05)",
+              }}>
+                {/* Felt sheen sweep */}
+                <div style={{
+                  position: "absolute", inset: 0,
+                  background: "linear-gradient(115deg, transparent 32%, rgba(255,255,255,0.035) 46%, transparent 62%)",
+                }} />
+                {/* Racetrack line */}
+                <div style={{
+                  position: "absolute", inset: "12% 9%", borderRadius: "1000px",
+                  border: "1.5px solid rgba(234,179,8,0.15)",
+                  boxShadow: "inset 0 0 26px rgba(0,0,0,0.3)",
+                }} />
+                {/* Brand watermark — felt pe embossed (pot ke neeche wali jagah) */}
+                <div style={{
+                  position: "absolute", left: 0, right: 0, bottom: "12%",
+                  display: "flex", flexDirection: "column",
+                  alignItems: "center", gap: 3,
+                  pointerEvents: "none",
+                }}>
+                  <div style={{
+                    fontSize: "clamp(15px, 4.5vw, 26px)", fontWeight: 900, letterSpacing: 6,
+                    color: "rgba(255,255,255,0.05)", textShadow: "0 1px 0 rgba(0,0,0,0.3)",
+                  }}>NINE CARD</div>
+                  <div style={{ fontSize: 11, letterSpacing: 8, color: "rgba(234,179,8,0.10)" }}>
+                    ♠ ♥ ♣ ♦
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -306,19 +368,38 @@ export default function NineCardGame() {
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
         }}>
           <div style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            background: "rgba(0,0,0,0.85)", padding: "7px 18px", borderRadius: 20,
-            border: `1px solid rgba(234,179,8,0.35)`, backdropFilter: "blur(8px)",
-            boxShadow: `0 0 18px rgba(234,179,8,0.15)`,
+            display: 'flex', alignItems: 'center', gap: 8,
+            background: "linear-gradient(180deg, rgba(23,16,40,0.95), rgba(5,3,12,0.97))",
+            padding: "8px 20px", borderRadius: 999,
+            border: `1px solid rgba(234,179,8,0.45)`, backdropFilter: "blur(8px)",
+            boxShadow: `0 0 22px rgba(234,179,8,0.18), 0 8px 20px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)`,
           }}>
-            <Coins size={13} color={G.m} />
+            {/* Gold chip coin */}
+            <div style={{
+              width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
+              background: 'radial-gradient(circle at 35% 30%, #fef08a 0%, #eab308 48%, #a16207 100%)',
+              border: '1px dashed rgba(0,0,0,0.35)',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,255,255,0.5)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Coins size={13} color="#451a03" />
+            </div>
             <div style={{ textAlign: 'left' }}>
-              <div style={{ fontSize: 8, color: G.l, opacity: 0.7, letterSpacing: 1.5, fontWeight: 800 }}>POT</div>
-              <div style={{ fontSize: 19, fontWeight: 900, color: "#fff", lineHeight: 1 }}>₹{table.pot}</div>
+              <div style={{ fontSize: 8, color: G.l, opacity: 0.75, letterSpacing: 2, fontWeight: 800 }}>POT</div>
+              <div style={{
+                fontSize: 20, fontWeight: 900, lineHeight: 1,
+                background: 'linear-gradient(180deg,#fff 30%,#fde68a)',
+                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+              }}>₹{table.pot}</div>
             </div>
           </div>
 
-          <div style={{ fontSize: 9, color: 'rgba(234,179,8,0.45)', fontWeight: 700, letterSpacing: 1 }}>
+          <div style={{
+            fontSize: 9, fontWeight: 800, letterSpacing: 1,
+            color: 'rgba(234,179,8,0.75)',
+            background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(234,179,8,0.2)',
+            padding: '2.5px 10px', borderRadius: 99,
+          }}>
             CALL ₹{table.currentCallAmount}
           </div>
 
@@ -513,40 +594,58 @@ export default function NineCardGame() {
         background: "linear-gradient(to top, #080512 65%, transparent)",
       }}>
         {isMyTurn ? (
-          <div style={{ display: "flex", gap: 8, width: "100%", maxWidth: 460, margin: '0 auto' }}>
-            {/* PACK */}
-            <ActionBtn3D
-              label="Pack"
-              variant="fold"
-              onClick={() => { nineCardApi.pack(tableId!).catch(() => {}); }}
-            />
+          <div style={{ width: "100%", maxWidth: 460, margin: '0 auto' }}>
+            {/* Turn timer bar — action bar ke upar thin progress */}
+            <div style={{
+              height: 3, borderRadius: 99, marginBottom: 9,
+              background: 'rgba(255,255,255,0.07)', overflow: 'hidden',
+            }}>
+              <div style={{
+                height: '100%', borderRadius: 99,
+                width: `${(Math.max(0, turnTime) / TURN_SECS) * 100}%`,
+                background: turnTime <= 5
+                  ? 'linear-gradient(90deg,#ef4444,#f97316)'
+                  : 'linear-gradient(90deg,#10b981,#eab308)',
+                transition: 'width 0.5s linear, background 0.3s',
+                boxShadow: turnTime <= 5 ? '0 0 8px rgba(239,68,68,0.6)' : '0 0 8px rgba(234,179,8,0.4)',
+              }} />
+            </div>
 
-            {/* SEE — only if not yet seen */}
-            {!hasSeenCards && (
+            <div style={{ display: "flex", gap: 8, width: "100%" }}>
+              {/* PACK */}
               <ActionBtn3D
-                label="See"
-                variant="see"
-                onClick={() => { nineCardApi.seeCards(tableId!).catch(() => {}); }}
+                label="Pack"
+                variant="fold"
+                onClick={() => act(() => nineCardApi.pack(tableId!), 'light')}
               />
-            )}
 
-            {/* CALL — primary (double width) */}
-            <ActionBtn3D
-              label="Call"
-              sublabel={`₹${table.currentCallAmount}`}
-              variant="call"
-              grow={2}
-              onClick={() => { nineCardApi.call(tableId!).catch(() => {}); }}
-            />
+              {/* SEE — only if not yet seen */}
+              {!hasSeenCards && (
+                <ActionBtn3D
+                  label="See"
+                  variant="see"
+                  onClick={() => act(() => nineCardApi.seeCards(tableId!), 'light')}
+                />
+              )}
 
-            {/* SHOW — only after seen */}
-            {hasSeenCards && (
+              {/* CALL — primary (double width) */}
               <ActionBtn3D
-                label="Show"
-                variant="show"
-                onClick={() => { nineCardApi.show(tableId!).catch(() => {}); }}
+                label="Call"
+                sublabel={`₹${table.currentCallAmount}`}
+                variant="call"
+                grow={2}
+                onClick={() => act(() => nineCardApi.call(tableId!))}
               />
-            )}
+
+              {/* SHOW — only after seen */}
+              {hasSeenCards && (
+                <ActionBtn3D
+                  label="Show"
+                  variant="show"
+                  onClick={() => act(() => nineCardApi.show(tableId!))}
+                />
+              )}
+            </div>
           </div>
         ) : table.status === 'playing' && turnName ? (
           <div style={{
@@ -658,7 +757,7 @@ export default function NineCardGame() {
           to   { transform: rotate(360deg); }
         }
         @keyframes slideUp {
-          from { opacity: 0; transform: tslateY(10px); }
+          from { opacity: 0; transform: translateY(10px); }
           to   { opacity: 1; transform: translateY(0); }
         }
         @keyframes afkPulse {

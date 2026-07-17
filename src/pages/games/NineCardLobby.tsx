@@ -12,6 +12,7 @@ import {
   ActionButton, EmptyLobby, InfoChip, LobbyCard,
   LobbyHero, LoadingScreen, PremiumLobbyPage, lobbyAnim,
 } from '../../components/lobby/LobbyTheme';
+import { haptic } from '../../utils/haptics';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -154,6 +155,7 @@ export default function NineCardGameLobby() {
   }, []);
 
   const handleJoin = useCallback(async (tableId: string) => {
+    haptic('medium');
     if (!user) { setError('Login required'); return; }
 
     const table = tables.find(t => t.id === tableId);
@@ -209,7 +211,7 @@ export default function NineCardGameLobby() {
 
         <motion.div variants={lobbyAnim.item} className="mb-5 flex gap-2 overflow-x-auto">
           {(['all', 'open', 'playing'] as const).map(f => (
-            <button key={f} onClick={() => setFilter(f)}
+            <button key={f} onClick={() => { haptic('light'); setFilter(f); }}
               className={`whitespace-nowrap rounded-full border px-4 py-2 text-xs font-bold transition ${
                 filter === f
                   ? 'border-emerald-500 bg-emerald-600 text-white'

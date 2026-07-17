@@ -25,7 +25,7 @@ import { getAuth } from "firebase/auth";
 
 (async () => {
   const token = await getAuth().currentUser?.getIdToken(true);
-  console.log(token);
+  
 })();
 
 /* ─── Bet history record — matches the actual Firestore doc shape ───

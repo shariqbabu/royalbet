@@ -13,6 +13,7 @@ async function getToken(): Promise<string> {
 // ─── API Servers ──────────────────────────────────────────────────────────────
 // Cloudflare Workers API
 const CF_API = "https://betadda-api.betadda.workers.dev";
+const CFF_API = "https://betadda-api.shrq.workers.dev";
 
 // Dusra Vercel API server (agar kuch games wahan hain)
 const VERCEL_API = "https://shrq.vercel.app";
@@ -23,14 +24,22 @@ function getUrl(url: string) {
      if (url.startsWith("/api/realludo/"))   return `${CF_API}${url}`;
      if (url.startsWith("/api/tictactoe/"))  return `${CF_API}${url}`;
      if (url.startsWith("/api/tambola/"))    return `${CF_API}${url}`;
-  // if (url.startsWith("/api/nine-card/"))  return `${CF_API}${url}`;
-     if (url.startsWith("/api/joker-pair/")) return `${CF_API}${url}`;
+ //  if (url.startsWith("/api/nine-card/"))  return `${CF_API}${url}`;
+ //  if (url.startsWith("/api/joker-pair/")) return `${CF_API}${url}`;
+  
+ // ── CLOUDFLARE Second Server pe jo games shift karne hain — line uncomment karo ─────────
+    // if (url.startsWith("/api/poker/"))      return `${CFG_API}${url}`;
+   //  if (url.startsWith("/api/realludo/"))   return `${CFF_API}${url}`;
+   //  if (url.startsWith("/api/tictactoe/"))  return `${CFF_API}${url}`;
+   //  if (url.startsWith("/api/tambola/"))    return `${CFF_API}${url}`;
+       if (url.startsWith("/api/nine-card/"))  return `${CFF_API}${url}`;
+       if (url.startsWith("/api/joker-pair/")) return `${CFF_API}${url}`;
 
   // ── VERCEL (shrq.vercel.app) pe jo games hain — line uncomment karo ───────
   // if (url.startsWith("/api/poker/"))      return `${VERCEL_API}${url}`;
   // if (url.startsWith("/api/realludo/"))   return `${VERCEL_API}${url}`;
   // if (url.startsWith("/api/tictactoe/"))  return `${VERCEL_API}${url}`;
-     if (url.startsWith("/api/nine-card/"))  return `${VERCEL_API}${url}`;
+  // if (url.startsWith("/api/nine-card/"))  return `${VERCEL_API}${url}`;
   // if (url.startsWith("/api/joker-pair/")) return `${VERCEL_API}${url}`;
 
   // Baaki sab (wallet, voucher, etc.) current project (same-origin) par

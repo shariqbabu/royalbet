@@ -8,8 +8,7 @@ async function getToken(): Promise<string> {
   return user.getIdToken();
 }
 
-const API_URL = "https://shrq.vercel.app";
-  //import.meta.env.VITE_API_SERVER;
+
 
 // ─── API Servers ──────────────────────────────────────────────────────────────
 // Cloudflare Workers API

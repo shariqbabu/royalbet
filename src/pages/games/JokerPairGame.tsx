@@ -1141,50 +1141,14 @@ const JokerPairGame: React.FC = () => {
                 )}
               </div>
 
+              <div className="flex-1" />
+
               {/* Prize */}
               <div className="flex items-center gap-1.5 bg-yellow-500/8 border border-yellow-500/20 rounded-xl px-3 py-1.5">
                 <Trophy size={12} className="text-yellow-400" />
                 <span className="text-sm font-black text-yellow-400">
                   ₹{game.prizePool}
                 </span>
-              </div>
-
-              <div className="flex-1" />
-
-              {/* Turn badge */}
-              <div
-                className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 border text-xs font-bold ${
-                  isMyTurn
-                    ? 'bg-violet-500/15 border-violet-500/30 text-violet-300'
-                    : 'bg-white/[0.03] border-white/8 text-white/30'
-                }`}
-              >
-                {isMyTurn ? (
-                  <>
-                    <motion.div
-                      animate={{ rotate: [0, 360] }}
-                      transition={{
-                        duration: 2,
-                        repeat: Infinity,
-                        ease: 'linear',
-                      }}
-                    >
-                      <Zap size={12} />
-                    </motion.div>
-                    Your Turn
-                  </>
-                ) : (
-                  <>
-                    <Clock size={12} />
-                    <span className="truncate max-w-[60px]">
-                      {
-                        game.playerData[game.currentTurnUid]?.name?.split(
-                          ' '
-                        )[0]
-                      }
-                    </span>
-                  </>
-                )}
               </div>
             </div>
 
@@ -1197,36 +1161,127 @@ const JokerPairGame: React.FC = () => {
           </div>
 
           <div className="px-3 pt-3 pb-4 space-y-3">
-            {/* ── All Players (turn indicator ke saath) ──────────────── */}
-            <div
-              className={`grid gap-2 ${
-                game.players.length <= 2
-                  ? 'grid-cols-2'
-                  : game.players.length === 3
-                  ? 'grid-cols-3'
-                  : 'grid-cols-2'
-              }`}
-            >
-              {game.players.map((uid) => {
-                const p = game.playerData?.[uid];
-                const isMe = uid === myUid;
-                // Fallback: playerData missing ho to bhi player dikhna chahiye
-                const name = p?.name || (isMe ? 'You' : 'Player');
-                const cardCount = isMe
-                  ? myHand.length
-                  : p?.handCount ?? 5;
-                return (
-                  <OpponentStrip
-                    key={uid}
-                    name={name}
-                    avatar={p?.avatar || ''}
-                    cardCount={cardCount}
-                    isCurrentTurn={game.currentTurnUid === uid}
-                    isHost={uid === (game as any).hostId}
-                    isMe={isMe}
-                  />
-                );
-              })}
+            {/* ── Players + Draw/Discard Info Row (mobile compact) ────── */}
+            <div className="space-y-2">
+              {/* Top: Draw/Discard counts + Turn indicator */}
+              <div className="flex items-center justify-between gap-2">
+                {/* Left: Deck info */}
+                <div className="flex items-center gap-3 text-xs">
+                  <div className="flex items-center gap-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-lg px-2.5 py-1.5">
+                    <div className="text-sm">🂠</div>
+                    <div className="flex flex-col items-start leading-none">
+                      <span className="text-[9px] text-white/30 uppercase font-medium">Draw</span>
+                      <span className="text-xs font-black text-indigo-300">{game.drawCount ?? 0}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 rounded-lg px-2.5 py-1.5">
+                    <div className="text-sm">🃏</div>
+                    <div className="flex flex-col items-start leading-none">
+                      <span className="text-[9px] text-white/30 uppercase font-medium">Discard</span>
+                      <span className="text-xs font-black text-amber-300">{game.discardPile.length}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right: Current turn badge */}
+                <div
+                  className={`flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 border text-[10px] font-bold ${
+                    isMyTurn
+                      ? 'bg-violet-500/15 border-violet-500/30 text-violet-300'
+                      : 'bg-white/[0.03] border-white/8 text-white/30'
+                  }`}
+                >
+                  {isMyTurn ? (
+                    <>
+                      <motion.div
+                        animate={{ rotate: [0, 360] }}
+                        transition={{
+                          duration: 2,
+                          repeat: Infinity,
+                          ease: 'linear',
+                        }}
+                      >
+                        <Zap size={11} />
+                      </motion.div>
+                      Your Turn
+                    </>
+                  ) : (
+                    <>
+                      <Clock size={11} />
+                      <span className="truncate max-w-[50px]">
+                        {
+                          game.playerData[game.currentTurnUid]?.name?.split(
+                            ' '
+                          )[0]
+                        }
+                      </span>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Bottom: Players list (horizontal scroll on mobile) */}
+              <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+                {game.players.map((uid) => {
+                  const p = game.playerData?.[uid];
+                  const isMe = uid === myUid;
+                  const name = p?.name || (isMe ? 'You' : 'Player');
+                  const cardCount = isMe
+                    ? myHand.length
+                    : p?.handCount ?? 5;
+                  const isTurn = game.currentTurnUid === uid;
+                  return (
+                    <div
+                      key={uid}
+                      className={`flex items-center gap-2 px-2.5 py-2 rounded-xl border transition-all shrink-0 ${
+                        isTurn
+                          ? 'border-violet-500/40 bg-violet-500/10 shadow-md shadow-violet-500/10'
+                          : 'border-white/5 bg-white/[0.02]'
+                      }`}
+                    >
+                      <div className="relative">
+                        <div
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold overflow-hidden ${
+                            isTurn
+                              ? 'bg-gradient-to-br from-violet-500 to-purple-600'
+                              : 'bg-gradient-to-br from-slate-700 to-slate-800'
+                          }`}
+                        >
+                          {p?.avatar ? (
+                            <img src={p.avatar} alt={name} className="w-full h-full object-cover" />
+                          ) : (
+                            name[0]?.toUpperCase()
+                          )}
+                        </div>
+                        {isTurn && (
+                          <motion.span
+                            className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-violet-500 rounded-full border-2 border-[#080810]"
+                            animate={{ scale: [1, 1.3, 1] }}
+                            transition={{ duration: 1.5, repeat: Infinity }}
+                          />
+                        )}
+                      </div>
+
+                      <div className="flex flex-col leading-none min-w-0">
+                        <div className="flex items-center gap-1">
+                          <span className="text-[10px] font-bold text-white truncate max-w-[60px]">
+                            {name}
+                          </span>
+                          {isMe && (
+                            <span className="text-[7px] font-black text-violet-300 bg-violet-500/20 px-1 py-0.5 rounded shrink-0">
+                              YOU
+                            </span>
+                          )}
+                        </div>
+                        <span className={`text-[9px] font-medium mt-0.5 ${isTurn ? 'text-violet-300' : 'text-white/30'}`}>
+                          {cardCount} {cardCount === 1 ? 'card' : 'cards'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             {/* ── Draw & Discard Piles ────────────────────────────────── */}

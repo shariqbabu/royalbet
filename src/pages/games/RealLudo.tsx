@@ -90,6 +90,11 @@ function getDisplayPathPos(pathPos: number, colorKey: "you" | "opp"): number {
 // ═══════════════════════════════════════════════
 //  HELPERS
 // ═══════════════════════════════════════════════
+// Haptic feedback — mobile browsers only (no-op elsewhere)
+function haptic(pattern: number | number[]) {
+  try { (navigator as any).vibrate?.(pattern); } catch { /* unsupported */ }
+}
+
 function gc(col:number,row:number){return{x:col*60+30,y:row*60+30};}
 
 /**
@@ -189,7 +194,8 @@ function remoteToLocal(data: any, myColor: PlayerColor): GameState {
 // ═══════════════════════════════════════════════
 function BoardCells() {
   const cells: React.ReactElement[] = [];
-  const stars: [number,number][] = [[1,6],[2,8],[6,2],[8,1],[13,6],[12,8],[8,12],[6,13]];
+  // Safe cells = 4 start cells + 4 mid-path stars (PATH indices 8/21/34/47)
+  const stars: [number,number][] = [[6,13],[1,6],[8,1],[13,8],[2,8],[6,2],[12,6],[8,12]];
 
   for (let row = 0; row < 15; row++) {
     for (let col = 0; col < 15; col++) {
@@ -215,10 +221,10 @@ function BoardCells() {
       if (row===7 && col===0)  { entryArrow="right"; entryColor="#DC2626"; }
       if (row===7 && col===14) { entryArrow="left";  entryColor="#F59E0B"; }
 
-      if (col===13 && row===6) startColor = "#1D4ED8"; // BLUE start (PATH[0])
-      if (col===1  && row===8) startColor = "#16A34A"; // GREEN start (PATH[26])
-      if (col===8  && row===13) startColor = "#F59E0B"; // YELLOW start
-      if (col===6  && row===1) startColor = "#DC2626"; // RED start
+      if (col===6  && row===13) startColor = "#1D4ED8"; // BLUE start (PATH[0])
+      if (col===8  && row===1)  startColor = "#16A34A"; // GREEN start (PATH[26])
+      if (col===13 && row===8)  startColor = "#F59E0B"; // YELLOW start (PATH[39])
+      if (col===1  && row===6)  startColor = "#DC2626"; // RED start (PATH[13])
 
       const isStar = stars.some(([c,r]) => c===col && r===row);
       const isColored = fill !== "#F5EBC9";
@@ -318,6 +324,7 @@ function AnimatedPawn({
         // Land at target
         curPixel.current = { ...hopTo };
         setPos({ ...hopTo });
+        haptic(8); // tick per cell hop
         idx++;
         if (idx < waypoints.length) {
           hopFrom = { ...hopTo };
@@ -340,28 +347,40 @@ function AnimatedPawn({
 
   return (
     <g transform={`translate(${pos.x},${pos.y})`}
-       onClick={() => !finished && onClick(player, pawnId)}
+       onClick={() => { if (!finished) { haptic(12); onClick(player, pawnId); } }}
        style={{ cursor: finished ? "default" : "pointer" }}>
       {selectable && (
         <circle cx="0" cy="-6" r="36" fill="none" stroke={c.glow} strokeWidth="3.5"
           style={{ animation: "pawnPulse 0.65s ease-in-out infinite alternate" }}/>
       )}
       <rect x="-30" y="-38" width="60" height="72" fill="transparent"/>
-      <ellipse cx="7" cy="30" rx="22" ry="5" fill="#000" opacity="0.22"/>
-      <ellipse cx="5" cy="29" rx="18" ry="4" fill="#000" opacity="0.35"/>
-      <ellipse cx="3" cy="28" rx="14" ry="3" fill="#000" opacity="0.45"/>
-      <ellipse cx="0" cy="25" rx="18" ry="6.5" fill={c.edge}/>
-      <ellipse cx="0" cy="23" rx="17" ry="5.5" fill={c.dark}/>
-      <ellipse cx="-3" cy="21.5" rx="11" ry="2.5" fill={c.light} opacity="0.4"/>
-      <path d="M -6,-4 Q -8,3 -11,11 Q -14,17 -17,22 L 17,22 Q 14,17 11,11 Q 8,3 6,-4 Z"
-        fill={`url(#pawn-body-${player})`} stroke={c.edge} strokeWidth="1.8" strokeLinejoin="round"/>
-      <path d="M -6,-4 Q -8,3 -11,11 Q -14,17 -17,22 L -12,22 Q -10,17 -8,11 Q -6,3 -4,-4 Z"
-        fill="#fff" opacity="0.32"/>
-      <ellipse cx="0" cy="-4" rx="8" ry="2.8" fill={c.edge}/>
-      <ellipse cx="0" cy="-5" rx="7" ry="1.8" fill={c.dark}/>
-      <circle cx="0" cy="-16" r="14" fill={`url(#pawn-head-${player})`} stroke={c.edge} strokeWidth="1.8"/>
-      <ellipse cx="-5" cy="-21" rx="5" ry="3.3" fill="#fff" opacity="0.7"/>
-      <ellipse cx="-3" cy="-23" rx="2" ry="1.3" fill="#fff" opacity="1"/>
+
+      {/* Ground shadow */}
+      <ellipse cx="0" cy="27" rx="20" ry="5.5" fill="#000" opacity="0.30"/>
+      <ellipse cx="0" cy="27" rx="13" ry="3.5" fill="#000" opacity="0.30"/>
+
+      {/* Base disc — two stacked rings for depth */}
+      <ellipse cx="0" cy="24" rx="19" ry="7" fill={c.edge}/>
+      <path d={`M -19,18 A 19 7 0 0 0 19,18 L 19,24 A 19 7 0 0 1 -19,24 Z`} fill={c.edge}/>
+      <ellipse cx="0" cy="18" rx="19" ry="7" fill={`url(#pawn-base-${player})`} stroke={c.edge} strokeWidth="1.2"/>
+      <ellipse cx="-5" cy="16.5" rx="9" ry="2.6" fill="#fff" opacity="0.35"/>
+
+      {/* Body — smooth flared cone, straight-on view */}
+      <path d="M -5.5,-8 C -6.5,2 -9.5,9 -14,16.5 C -15,18.5 -13,19.5 0,19.5 C 13,19.5 15,18.5 14,16.5 C 9.5,9 6.5,2 5.5,-8 Z"
+        fill={`url(#pawn-body-${player})`} stroke={c.edge} strokeWidth="1.6" strokeLinejoin="round"/>
+      {/* Specular strip on body */}
+      <path d="M -4,-7 C -5,2 -7,9 -10,15.5 C -9,16.5 -7.5,16.5 -6.5,15.5 C -4.5,9 -3,2 -2.5,-7 Z"
+        fill="#fff" opacity="0.45"/>
+
+      {/* Neck collar ring */}
+      <ellipse cx="0" cy="-8" rx="7.5" ry="3" fill={c.edge}/>
+      <ellipse cx="0" cy="-9" rx="6.5" ry="2.2" fill={`url(#pawn-base-${player})`}/>
+
+      {/* Head — glossy sphere */}
+      <circle cx="0" cy="-20" r="12.5" fill={`url(#pawn-head-${player})`} stroke={c.edge} strokeWidth="1.6"/>
+      {/* Big soft highlight + hot spot */}
+      <ellipse cx="-4.5" cy="-24.5" rx="5" ry="3.6" fill="#fff" opacity="0.55" transform="rotate(-25 -4.5 -24.5)"/>
+      <circle cx="-3" cy="-26" r="1.8" fill="#fff" opacity="0.95"/>
     </g>
   );
 }
@@ -662,7 +681,11 @@ export default function LudoGame() {
         const reason = data.finishReason === "player_left" ? "🚪 Opponent left"
           : data.finishReason === "timeout" ? "⏱ Time's up!"
           : "🏆 Game Over!";
-        setWinOverlay(prev => prev.show ? prev : {show:true, winner, reason});
+        setWinOverlay(prev => {
+          if (prev.show) return prev;
+          haptic(winner === "you" ? [50,50,50,50,150] : [150,80,150]);
+          return {show:true, winner, reason};
+        });
         // Payout is handled entirely server-side — no client action needed.
       } else {
         if (local.turn==="you" && !local.diceRolled) setStatusMsg("🎲 Tap dice to roll!");
@@ -750,9 +773,12 @@ useEffect(() => {
       }));
     }
 
-    if (res.captured)  showToastFn("💥 Captured! +20", 1300);
-    if (res.pawnJustFinished) showToastFn("🏁 Pawn Home! +10", 1500);  // 🆕
-    if (res.gameOver)  showToastFn(res.winnerColor === myColorRef.current ? "🎉 You Win!" : "Game Over", 1500);
+    if (res.captured)  { haptic([30,40,60]); showToastFn("💥 Captured! +20", 1300); }
+    if (res.pawnJustFinished) { haptic([20,30,20,30,50]); showToastFn("🏁 Pawn Home! +10", 1500); }  // 🆕
+    if (res.gameOver)  {
+      haptic(res.winnerColor === myColorRef.current ? [50,50,50,50,120] : 200);
+      showToastFn(res.winnerColor === myColorRef.current ? "🎉 You Win!" : "Game Over", 1500);
+    }
   } catch (e: any) {
     showToastFn(e.message || "Move failed", 1200);
   } finally {
@@ -765,10 +791,12 @@ useEffect(() => {
     if (!tableId || busy || gameState.turn!=="you" || gameState.diceRolled || gameState.gameOver || !roomReady) return;
     setBusy(true);
     setDiceRolling(true);
+    haptic(15); // dice tap feedback
     try {
       const res: any = await ludoApi.roll(tableId);
       setDiceDisplay(res.diceValue);
       setDiceRolling(false);
+      haptic(res.diceValue === 6 ? [40,50,80] : 25); // 6 = special buzz
       if (res.turnPassed) {
         setStatusMsg("😔 No moves! Turn skipped");
       } else if (res.movable?.length === 1) {
@@ -889,14 +917,29 @@ useEffect(() => {
     <linearGradient id="g-trophy" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stopColor="#FBBF24"/><stop offset="100%" stopColor="#EA580C"/>
     </linearGradient>
-    <linearGradient id="pawn-body-you" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%"  stopColor="#93C5FD"/>
-      <stop offset="35%" stopColor="#3B82F6"/>
+    {/* Pawn body — LEFT→RIGHT gradient = cylindrical 3D shading */}
+    <linearGradient id="pawn-body-you" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"  stopColor="#0F1E4C"/>
+      <stop offset="28%" stopColor="#3B82F6"/>
+      <stop offset="45%" stopColor="#93C5FD"/>
+      <stop offset="62%" stopColor="#3B82F6"/>
       <stop offset="100%" stopColor="#0F1E4C"/>
      </linearGradient>
-    <linearGradient id="pawn-body-opp" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%"  stopColor="#6EE7B7"/>
-      <stop offset="35%" stopColor="#10B981"/>
+    <linearGradient id="pawn-body-opp" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"  stopColor="#022C22"/>
+      <stop offset="28%" stopColor="#10B981"/>
+      <stop offset="45%" stopColor="#6EE7B7"/>
+      <stop offset="62%" stopColor="#10B981"/>
+      <stop offset="100%" stopColor="#022C22"/>
+    </linearGradient>
+    <linearGradient id="pawn-base-you" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"  stopColor="#1E3A8A"/>
+      <stop offset="45%" stopColor="#60A5FA"/>
+      <stop offset="100%" stopColor="#0F1E4C"/>
+    </linearGradient>
+    <linearGradient id="pawn-base-opp" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"  stopColor="#065F46"/>
+      <stop offset="45%" stopColor="#34D399"/>
       <stop offset="100%" stopColor="#022C22"/>
     </linearGradient>
     <radialGradient id="pawn-head-you" cx="32%" cy="28%" r="75%">

@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { verifyToken } from '../lib/middleware';
 import { internalWalletTransaction } from '../lib/walletInternal';
+import { notifyAdmins } from '../lib/telegramNotify';
 import { FieldValue } from "firebase-admin/firestore";
 import { db } from '../lib/firebaseAdmin';
 
@@ -66,6 +67,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           updatedAt: FieldValue.serverTimestamp(),
           idempotencyKey: withdrawKey,
         });
+
+        // Admin ko Telegram pe instant notify (best-effort, fail ho to bhi transaction OK)
+        await notifyAdmins({
+          kind: 'withdraw',
+          userName: displayName ?? 'Unknown',
+          amount: numAmount,
+          upiId,
+          userEmail: email,
+        });
       }
 
     } else if (action === 'ADDFUND') {
@@ -112,6 +122,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           userName: displayName,
           utrNumber,
           redeemCode,
+        });
+
+        // Admin ko Telegram pe instant notify (best-effort)
+        await notifyAdmins({
+          kind: 'deposit',
+          userName: displayName,
+          amount: numAmount,
+          utrNumber,
+          screenshotUrl: screenshot,
         });
       }
 
